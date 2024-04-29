@@ -1,0 +1,7 @@
+[workspace]
+
+members = [
+    "incremental_affix"
+]
+
+resolver = "2"
