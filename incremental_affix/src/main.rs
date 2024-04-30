@@ -1,3 +1,5 @@
+mod item;
+
 fn main() {
-    println!("Hello, world!");
+    let (implicits, bases, backpack) = item::make_backpack();
 }
