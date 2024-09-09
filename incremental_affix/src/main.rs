@@ -1,12 +1,13 @@
 mod item;
 mod drop_table;
+mod game;
 
 fn main() {
-    let implicits = item::initialize_implicits();
-    let bases = item::initialize_bases();
+    let implicits = game::item::initialize_implicits();
+    let bases = game::item::initialize_bases();
 
-    let prefixes = item::initialize_prefixes();
-    let suffixes = item::initialize_suffixes();
+    let prefixes = game::item::initialize_prefixes();
+    let suffixes = game::item::initialize_suffixes();
     let drop_tables = drop_table::initialize_drop_tables(&bases, prefixes, suffixes);
 
     let bases_table = drop_tables.get::<drop_table::StorageBasesDropTable>().unwrap();

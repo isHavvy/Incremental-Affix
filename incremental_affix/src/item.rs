@@ -12,9 +12,9 @@ pub(crate) enum ModifierKind {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Modifier {
-    kind: ModifierKind,
-    min: i32,
-    max: i32,
+    pub kind: ModifierKind,
+    pub min: i32,
+    pub max: i32,
 }
 
 fn sign(n: i32) -> char {
@@ -38,16 +38,16 @@ impl Modifier {
 
 #[derive(Debug, Clone)]
 pub struct Affix {
-    name: String,
-    modifier: Modifier,
-    modifier_actual: i32,
-    hybrid_modifier: Option<Modifier>,
-    hybrid_modifier_actual: i32,
+    pub name: String,
+    pub modifier: Modifier,
+    pub modifier_actual: i32,
+    pub hybrid_modifier: Option<Modifier>,
+    pub hybrid_modifier_actual: i32,
 }
 
 impl Affix {
     /// Construct a new affix with the given modifier. Sets the hybrid to `None`.
-    fn new(name: String, modifier: Modifier) -> Self {
+    pub fn new(name: String, modifier: Modifier) -> Self {
         Self {
             name,
             modifier,
@@ -78,7 +78,7 @@ impl Affix {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Implicit(Affix);
+pub(crate) struct Implicit(pub Affix);
 
 impl Deref for Implicit {
     type Target = Affix;
@@ -95,7 +95,7 @@ impl DerefMut for Implicit {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Prefix(Affix);
+pub(crate) struct Prefix(pub Affix);
 
 impl Deref for Prefix {
     type Target = Affix;
@@ -112,7 +112,7 @@ impl DerefMut for Prefix {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Suffix(Affix);
+pub(crate) struct Suffix(pub Affix);
 
 impl Deref for Suffix {
     type Target = Affix;
@@ -143,18 +143,18 @@ pub(crate) enum Quality {
 pub(crate) struct AffixiveItemBaseIndex(pub usize);
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-struct ImplicitIndex(usize);
+pub struct ImplicitIndex(pub usize);
 
 #[derive(Debug, Clone, Copy)]
-enum AffixiveItemBaseTag {
+pub enum AffixiveItemBaseTag {
     Inventory,
 }
 
 #[derive(Debug)]
 pub(crate) struct AffixiveItemBase {
-    name: String,
-    tags: Vec<AffixiveItemBaseTag>,
-    implicits: Vec<ImplicitIndex>,
+    pub name: String,
+    pub tags: Vec<AffixiveItemBaseTag>,
+    pub implicits: Vec<ImplicitIndex>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -264,140 +264,4 @@ impl AffixiveItem {
             }
         }
     }
-}
-
-pub(crate) fn initialize_bases() -> Vec<AffixiveItemBase> {
-    let mut bases = vec![];
-
-    let inventory_tags = vec![AffixiveItemBaseTag::Inventory];
-
-    bases.push(AffixiveItemBase {
-        name: "Bag".to_string(),
-        tags: inventory_tags.clone(),
-        implicits: vec![ImplicitIndex(0)],
-    });
-
-    bases.push(AffixiveItemBase {
-        name: "Satchel".to_string(),
-        tags: inventory_tags.clone(),
-        implicits: vec![ImplicitIndex(1)],
-    });
-
-    bases.push(AffixiveItemBase {
-        name: "Purse".to_string(),
-        tags: inventory_tags.clone(),
-        implicits: vec![ImplicitIndex(2)],
-    });
-
-    bases.push(AffixiveItemBase {
-        name: "Backpack".to_string(),
-        tags: inventory_tags.clone(),
-        implicits: vec![ImplicitIndex(3)],
-    });
-
-    bases.push(AffixiveItemBase {
-        name: "Rucksack".to_string(),
-        tags: inventory_tags.clone(),
-        implicits: vec![ImplicitIndex(4)],
-    });
-
-    bases.push(AffixiveItemBase {
-        name: "Pocket Dimension".to_string(),
-        tags: inventory_tags.clone(),
-        implicits: vec![ImplicitIndex(5)],
-    });
-
-    bases
-}
-
-pub(crate) fn initialize_implicits() -> Vec<Implicit> {
-    let mut mods = vec![];
-
-    mods.push(Affix {
-        name: "BagInventory".to_string(),
-        modifier: Modifier { kind: ModifierKind::InventoryBase, min: 1, max: 1 },
-        modifier_actual: 1,
-        hybrid_modifier: Some(Modifier { kind: ModifierKind::InventoryHeight, min: 1, max: 1 }),
-        hybrid_modifier_actual: 1,
-    });
-
-    mods.push(Affix {
-        name: "SatchelInventory".to_string(),
-        modifier: Modifier { kind: ModifierKind::InventoryBase, min: 1, max: 1 },
-        modifier_actual: 1,
-        hybrid_modifier: Some(Modifier { kind: ModifierKind::InventoryHeight, min: 3, max: 3 }),
-        hybrid_modifier_actual: 3,
-    });
-
-    mods.push(Affix {
-        name: "PurseInventory".to_string(),
-        modifier: Modifier { kind: ModifierKind::InventoryBase, min: 2, max: 2 },
-        modifier_actual: 2,
-        hybrid_modifier: Some(Modifier { kind: ModifierKind::InventoryHeight, min: 3, max: 3 }),
-        hybrid_modifier_actual: 3,
-    });
-
-    mods.push(Affix {
-        name: "BackpackInventory".to_string(),
-        modifier: Modifier { kind: ModifierKind::InventoryBase, min: 3, max: 3 },
-        modifier_actual: 3,
-        hybrid_modifier: Some(Modifier { kind: ModifierKind::InventoryHeight, min: 3, max: 3 }),
-        hybrid_modifier_actual: 3,
-    });
-
-    mods.push(Affix {
-        name: "RucksackInventory".to_string(),
-        modifier: Modifier { kind: ModifierKind::InventoryBase, min: 3, max: 3 },
-        modifier_actual: 3,
-        hybrid_modifier: Some(Modifier { kind: ModifierKind::InventoryHeight, min: 5, max: 5 }),
-        hybrid_modifier_actual: 5,
-    });
-
-    mods.push(Affix {
-        name: "PocketDimensionInventory".to_string(),
-        modifier: Modifier { kind: ModifierKind::InventoryBase, min: 3, max: 3 },
-        modifier_actual: 3,
-        hybrid_modifier: Some(Modifier { kind: ModifierKind::InventoryHeight, min: 9, max: 9 }),
-        hybrid_modifier_actual: 9,
-    });
-
-    mods.into_iter().map(Implicit).collect()
-}
-
-pub(crate) fn initialize_suffixes() -> Vec<Suffix> {
-    let mut suffixes = vec![];
-
-    suffixes.push(Affix {
-        name: "Holding".to_owned(),
-        modifier: Modifier { kind: ModifierKind::InventoryBase, min: 1, max: 1 },
-        modifier_actual: 1,
-        hybrid_modifier: None,
-        hybrid_modifier_actual: 0,
-    });
-    
-    suffixes.push(Affix {
-        name: "More Holding".to_owned(),
-        modifier: Modifier { kind: ModifierKind::InventoryBase, min: 2, max: 2 },
-        modifier_actual: 2,
-        hybrid_modifier: None,
-        hybrid_modifier_actual: 0,
-    });
-
-    suffixes.push(Affix::new("Tiny Pockets".to_string(), Modifier { kind: ModifierKind::IncreasedVolume, min: 8, max: 15 }));
-    suffixes.push(Affix::new("Pockets".to_string(), Modifier { kind: ModifierKind::IncreasedVolume, min: 16, max: 24 }));
-    suffixes.push(Affix::new("Large Tiny Pockets".to_string(), Modifier { kind: ModifierKind::IncreasedVolume, min: 25, max: 34 }));
-    suffixes.push(Affix::new("Gargantuan Pockets".to_string(), Modifier { kind: ModifierKind::IncreasedVolume, min: 35, max: 45 }));
-
-    return suffixes.into_iter().map(Suffix).collect()
-}
-
-pub(crate) fn initialize_prefixes() -> Vec<Prefix> {
-    let mut prefixes = vec![];
-
-    prefixes.push(Affix::new("Student's".to_string(), Modifier { kind: ModifierKind::InventorySkillGain, min: 1, max: 25 }));
-    prefixes.push(Affix::new("Teacher's".to_string(), Modifier { kind: ModifierKind::InventorySkillGain, min: 26, max: 50 }));
-    prefixes.push(Affix::new("Professor's".to_string(), Modifier { kind: ModifierKind::InventorySkillGain, min: 51, max: 75 }));
-    prefixes.push(Affix::new("Mentor's".to_string(), Modifier { kind: ModifierKind::InventorySkillGain, min: 76, max: 100 }));
-
-    return prefixes.into_iter().map(Prefix).collect();
 }
