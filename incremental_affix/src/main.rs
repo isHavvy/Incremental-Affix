@@ -1,6 +1,8 @@
-mod item;
-mod drop_table;
+mod engine;
 mod game;
+
+use engine::drop_table;
+use engine::item;
 
 fn main() {
     let implicits = game::item::initialize_implicits();
