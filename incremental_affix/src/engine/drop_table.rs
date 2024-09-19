@@ -5,6 +5,8 @@ use rand::Rng;
 
 use crate::item::{AffixiveItemBase, AffixiveItemBaseIndex, Prefix, Suffix};
 
+use super::item::{AffixiveItemBaseTagMap, ModifierKind};
+
 pub struct DropTable<T> {
     total_weight: i32,
     weights: Vec<i32>,
@@ -61,20 +63,20 @@ pub enum SuffixOrPrefix {
     Prefix,
 }
 
-pub(crate) struct InventoryModifierPrefixes(DropTable<Prefix>);
+pub(crate) struct InventoryModifierPrefixes<MK: ModifierKind>(DropTable<Prefix<MK>>);
 
-impl Deref for InventoryModifierPrefixes {
-    type Target = DropTable<Prefix>;
+impl<MK> Deref for InventoryModifierPrefixes<MK> where MK: ModifierKind {
+    type Target = DropTable<Prefix<MK>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-pub(crate) struct InventoryModifierSuffixes(DropTable<Suffix>);
+pub(crate) struct InventoryModifierSuffixes<MK: ModifierKind>(DropTable<Suffix<MK>>);
 
-impl Deref for InventoryModifierSuffixes {
-    type Target = DropTable<Suffix>;
+impl<MK> Deref for InventoryModifierSuffixes<MK> where MK: ModifierKind {
+    type Target = DropTable<Suffix<MK>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -101,7 +103,7 @@ impl Deref for StorageBasesDropTable {
     }
 }
 
-pub fn initialize_drop_tables(bases: &[AffixiveItemBase], prefixes: Vec<Prefix>, suffixes: Vec<Suffix>) -> AnyMap {
+pub fn initialize_drop_tables<MK: ModifierKind>(bases: &[AffixiveItemBase], prefixes: AffixiveItemBaseTagMap<Vec<Prefix<MK>>>, suffixes: AffixiveItemBaseTagMap<Vec<Suffix<MK>>>) -> AnyMap {
     let mut drop_tables = AnyMap::new();
 
     let mut base_drop_table = DropTableBuilder::new();
@@ -112,20 +114,20 @@ pub fn initialize_drop_tables(bases: &[AffixiveItemBase], prefixes: Vec<Prefix>,
 
     drop_tables.insert(StorageBasesDropTable(base_drop_table));
 
-    let prefix_drop_table = DropTableBuilder::new()
-        .add_loot(prefixes[0].clone(), 50)
-        .add_loot(prefixes[1].clone(), 50)
-        .add_loot(prefixes[2].clone(), 50)
-        .add_loot(prefixes[3].clone(), 50)
+    let inventory_prefix_drop_table = DropTableBuilder::new()
+        .add_loot(prefixes.inventory[0].clone(), 50)
+        .add_loot(prefixes.inventory[1].clone(), 50)
+        .add_loot(prefixes.inventory[2].clone(), 50)
+        .add_loot(prefixes.inventory[3].clone(), 50)
         .build();
 
-    drop_tables.insert(InventoryModifierPrefixes(prefix_drop_table));
+    drop_tables.insert(InventoryModifierPrefixes(inventory_prefix_drop_table));
 
     let suffix_drop_table = DropTableBuilder::new()
-        .add_loot(suffixes[0].clone(), 50)
-        .add_loot(suffixes[1].clone(), 50)
-        .add_loot(suffixes[2].clone(), 50)
-        .add_loot(suffixes[3].clone(), 50)
+        .add_loot(suffixes.inventory[0].clone(), 50)
+        .add_loot(suffixes.inventory[1].clone(), 50)
+        .add_loot(suffixes.inventory[2].clone(), 50)
+        .add_loot(suffixes.inventory[3].clone(), 50)
         .build();
 
     drop_tables.insert(InventoryModifierSuffixes(suffix_drop_table));

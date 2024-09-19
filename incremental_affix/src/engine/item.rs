@@ -2,52 +2,42 @@ use std::ops::{Deref, DerefMut};
 
 use rand::Rng;
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum ModifierKind {
-    InventoryBase,
-    InventoryHeight,
-    IncreasedVolume,
-    InventorySkillGain,
+pub trait ModifierKind: Clone + Copy + 'static {
+    fn display_actual(&self, actual: i32) -> String;
 }
+
+pub type ModifierValue = i32;
 
 #[derive(Debug, Clone, Copy)]
-pub struct Modifier {
-    pub kind: ModifierKind,
-    pub min: i32,
-    pub max: i32,
+pub struct Modifier<MK> where MK: ModifierKind {
+    pub kind: MK,
+    pub min: ModifierValue,
+    pub max: ModifierValue,
 }
 
-fn sign(n: i32) -> char {
-    if n > 0 { '+' } else { '-' }
-}
-
-impl Modifier {
-    fn display_actual(&self, actual: i32) -> String {
-        match self.kind {
-            ModifierKind::InventoryBase => format!("{}{} Inventory Base", sign(actual), actual),
-            ModifierKind::InventoryHeight => format!("{}{} Inventory Height", sign(actual), actual),
-            ModifierKind::IncreasedVolume => format!("{}{}% Increased Volume", sign(actual), actual),
-            ModifierKind::InventorySkillGain => format!("Skills in inventory gain {}% of earned experience", actual),
-        }
+impl<MK: ModifierKind> Modifier<MK> {
+    fn display_actual(&self, actual: ModifierValue) -> String {
+        self.kind.display_actual(actual)
     }
 
-    fn random_modifier_value(&self) -> i32 {
+    fn random_modifier_value(&self) -> ModifierValue {
         rand::thread_rng().gen_range(self.min..self.max + 1)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Affix {
+pub struct Affix<MK> where MK: ModifierKind {
+    #[expect(unused)] // Have not implemented deeper inspection.
     pub name: String,
-    pub modifier: Modifier,
-    pub modifier_actual: i32,
-    pub hybrid_modifier: Option<Modifier>,
-    pub hybrid_modifier_actual: i32,
+    pub modifier: Modifier<MK>,
+    pub modifier_actual: ModifierValue,
+    pub hybrid_modifier: Option<Modifier<MK>>,
+    pub hybrid_modifier_actual: ModifierValue,
 }
 
-impl Affix {
+impl<MK: ModifierKind> Affix<MK> {
     /// Construct a new affix with the given modifier. Sets the hybrid to `None`.
-    pub fn new(name: String, modifier: Modifier) -> Self {
+    pub fn new(name: String, modifier: Modifier<MK>) -> Self {
         Self {
             name,
             modifier,
@@ -69,68 +59,75 @@ impl Affix {
         output
     }
 
-    pub(crate) fn randomize_actual(&mut self) {
+    pub fn randomize_actual(&mut self) {
         self.modifier_actual = self.modifier.random_modifier_value();
         if let Some(modifier) = self.hybrid_modifier {
             self.hybrid_modifier_actual = modifier.random_modifier_value();
         }
     }
+
+    pub fn modifiers(&self) -> impl Iterator<Item=(&Modifier<MK>, ModifierValue)> {
+        [
+            Some((&self.modifier, self.modifier_actual)),
+            (self.hybrid_modifier.as_ref().map(|hybrid| (hybrid, self.hybrid_modifier_actual)))
+        ].into_iter().filter_map(|x| x) }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Implicit(pub Affix);
+pub(crate) struct Implicit<MK: ModifierKind>(pub Affix<MK>);
 
-impl Deref for Implicit {
-    type Target = Affix;
+impl<MK> Deref for Implicit<MK> where MK: ModifierKind {
+    type Target = Affix<MK>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for Implicit {
+impl<MK> DerefMut for Implicit<MK> where MK: ModifierKind {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Prefix(pub Affix);
+pub(crate) struct Prefix<MK: ModifierKind>(pub Affix<MK>);
 
-impl Deref for Prefix {
-    type Target = Affix;
+impl<MK> Deref for Prefix<MK> where MK: ModifierKind {
+    type Target = Affix<MK>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for Prefix {
+impl<MK> DerefMut for Prefix<MK> where MK: ModifierKind {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Suffix(pub Affix);
+pub(crate) struct Suffix<MK: ModifierKind>(pub Affix<MK>);
 
-impl Deref for Suffix {
-    type Target = Affix;
+impl<MK> Deref for Suffix<MK> where MK: ModifierKind {
+    type Target = Affix<MK>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl DerefMut for Suffix {
+impl<MK> DerefMut for Suffix<MK> where MK: ModifierKind {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
-pub(crate) enum Quality {
+pub enum Quality {
     /// An item with fixed affixes.
+    #[expect(unused)]
     FixedArtifact,
 
     /// An item with the specific number of prefixes and suffixes.
@@ -140,20 +137,40 @@ pub(crate) enum Quality {
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub(crate) struct AffixiveItemBaseIndex(pub usize);
+pub struct AffixiveItemBaseIndex(pub usize);
+
+impl AffixiveItemBaseIndex {
+    pub fn inner(self) -> usize {
+        self.0
+    }
+}
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct ImplicitIndex(pub usize);
 
-#[derive(Debug, Clone, Copy)]
-pub enum AffixiveItemBaseTag {
+
+// TODO(Havvy): This should be in game, not engine!
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum AffixiveItemTag {
     Inventory,
+
+    Armor,
+    Footwear,
+}
+
+#[expect(unused)]
+pub struct AffixiveItemBaseTagMap<T> {
+    pub inventory: T,
+
+    pub armor: T,
+    pub footwear: T,
 }
 
 #[derive(Debug)]
 pub(crate) struct AffixiveItemBase {
     pub name: String,
-    pub tags: Vec<AffixiveItemBaseTag>,
+    pub level: u8,
+    pub tags: Vec<AffixiveItemTag>,
     pub implicits: Vec<ImplicitIndex>,
 }
 
@@ -164,18 +181,22 @@ pub(crate) enum PushAffixError {
 }
 
 #[derive(Debug)]
-pub(crate) struct AffixiveItem {
+pub(crate) struct AffixiveItem<MK: ModifierKind> {
     base_ix: AffixiveItemBaseIndex,
-    implicits: Vec<Implicit>,
-    prefixes: Vec<Prefix>,
-    suffixes: Vec<Suffix>,
+    implicits: Vec<Implicit<MK>>,
+    prefixes: Vec<Prefix<MK>>,
+    suffixes: Vec<Suffix<MK>>,
     quality: Quality,
+    pub tags: Vec<AffixiveItemTag>,
 }
 
-impl AffixiveItem {
-    pub(crate) fn new(bases: &[AffixiveItemBase], implicits: &[Implicit], base_ix: AffixiveItemBaseIndex, quality: Quality) -> Self {
+impl<MK> AffixiveItem<MK> where MK: ModifierKind {
+    pub(crate) fn new(bases: &[AffixiveItemBase], implicits: &[Implicit<MK>], base_ix: AffixiveItemBaseIndex, quality: Quality) -> Self {
         let base = &bases[base_ix.0];
-        let implicits = base.implicits.iter().map(|ix| implicits[ix.0].clone()).collect();
+        let mut implicits: Vec<Implicit<MK>> = base.implicits.iter().map(|ix| implicits[ix.0].clone()).collect();
+        for implicit in &mut implicits {
+            implicit.randomize_actual();
+        }
 
         Self {
             base_ix,
@@ -183,8 +204,10 @@ impl AffixiveItem {
             prefixes: vec![],
             suffixes: vec![],
             quality,
+            tags: base.tags.clone(),
         }
     }
+
     pub(crate) fn display(&self, bases: &[AffixiveItemBase]) -> String {
         let mut output = String::new();
 
@@ -237,10 +260,16 @@ impl AffixiveItem {
         output
     }
 
+    pub fn level(&self, bases: &[AffixiveItemBase]) -> u8 {
+        let base = &bases[self.base_ix.inner()];
+
+        base.level
+    }
+
     /// Attempt to attach a prefix to this item.
     /// 
     /// Return Ok(()) if the prefix was added.
-    pub(crate) fn try_push_prefix(&mut self, prefix: Prefix) -> Result<(), PushAffixError> {
+    pub fn try_push_prefix(&mut self, prefix: Prefix<MK>) -> Result<(), PushAffixError> {
         match self.quality {
             Quality::FixedArtifact => Err(PushAffixError::AffixiveItemIsFixed),
             Quality::Quality(quality) if quality as usize == self.prefixes.len() => Err(PushAffixError::AffixiveItemQualityTooLow),
@@ -254,7 +283,7 @@ impl AffixiveItem {
     /// Attempt to attach a suffix to this item.
     /// 
     /// Return Ok(()) if the suffix was added.
-    pub(crate) fn try_push_suffix(&mut self, suffix: Suffix) -> Result<(), PushAffixError> {
+    pub fn try_push_suffix(&mut self, suffix: Suffix<MK>) -> Result<(), PushAffixError> {
         match self.quality {
             Quality::FixedArtifact => Err(PushAffixError::AffixiveItemIsFixed),
             Quality::Quality(quality) if quality as usize == self.suffixes.len() => Err(PushAffixError::AffixiveItemQualityTooLow),
@@ -263,5 +292,12 @@ impl AffixiveItem {
                 Ok(())
             }
         }
+    }
+
+    pub fn modifiers(&self) -> impl Iterator<Item=(&Modifier<MK>, ModifierValue)> {
+        self.implicits.iter().map(|implicit| &**implicit)
+        .chain({ let x = self.prefixes.iter().map(|prefix| &**prefix); x })
+        .chain(self.suffixes.iter().map(|suffix| &**suffix))
+        .flat_map(|affix| affix.modifiers())
     }
 }
