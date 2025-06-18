@@ -1,12 +1,29 @@
 mod engine;
-mod game;
+//#[path = "game"]
+//mod game_old;
+mod ui;
+mod incremental;
 
-use engine::drop_table;
+//use engine::drop_table;
 use engine::item;
-use game::modifiers::GameModifierKind;
-use game::player::Player;
+// use game::modifiers::GameModifierKind;
+// use game::player::Player;
+
+use bevy::prelude::*;
+use incremental::{IncrementalPlugin, Stockyard};
+
+
 
 fn main() {
+    App::new()
+    .add_plugins(DefaultPlugins)
+    .add_plugins(IncrementalPlugin)
+    .add_plugins(ui::UiPlugin)
+    .run();
+}
+
+/*
+fn _main2() {
     let implicits = game::item::initialize_implicits();
     let bases = game::item::initialize_bases();
 
@@ -48,3 +65,4 @@ fn main() {
         Err(_) => { panic!("Player cannot equip?" )},
     }
 }
+    */
