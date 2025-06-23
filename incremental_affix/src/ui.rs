@@ -1,22 +1,15 @@
 use bevy::{color::palettes::css::BLACK, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 
-use crate::incremental::{self, actions::Actions, screens::Screens, StockKind, Stockyard};
+use crate::incremental::{self, actions::{ActionProgress, Actions, CurrentAction}, screens::Screens, StockKind, Stockyard};
 
 #[derive(Debug, Default, Resource)]
 pub struct ActionProgressBar(Option<Entity>);
-
-/// I think ActionProgress exists somewhere else? Not sure.
-/// This is a dummy struct to get the code to compile since
-/// I left it in a non-compilable state.
-#[derive(Debug, Default, Resource)]
-pub struct ActionProgress;
 
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
-        .init_resource::<ActionProgress>()
         .init_resource::<ActionProgressBar>()
         .add_systems(Startup, setup)
         .add_systems(Update, (
@@ -31,20 +24,22 @@ impl Plugin for UiPlugin {
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    action_progress: Res<ActionProgress>,
+    action_progress: Res<incremental::actions::ActionProgress>,
     action_progress_bar: ResMut<ActionProgressBar>,
 ) {
     let font = asset_server.load::<Font>("fonts/FiraSans-Bold.ttf");
 
     commands.spawn(Camera2d::default());
 
-    let mut root_node = commands.spawn(Node {
-        width: Val::Percent(100.0),
-        height: Val::Percent(100.0),
-        align_items: AlignItems::Center,
-        //justify_content: JustifyContent::Center,
-        ..default()
-    });
+    let mut root_node = commands.spawn((
+        Node {
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            //justify_content: JustifyContent::Center,
+            ..default()
+        },
+    ));
 
     root_node.with_children(|root_node| {
         root_node
@@ -157,7 +152,7 @@ fn setup_screens_bar(bar: &mut RelatedSpawnerCommands<'_, ChildOf>, font: Handle
 
 fn initialize_actions(
     node: &mut RelatedSpawnerCommands<'_, ChildOf>, font: Handle<Font>,
-    action_progress: &ActionProgress,
+    action_progress: &incremental::actions::ActionProgress,
     mut res_action_progress_bar: ResMut<ActionProgressBar>,
 ) {
     let _action_progress_bar = node.spawn((
@@ -171,16 +166,17 @@ fn initialize_actions(
             ..default()
         },
         BorderColor(Color::BLACK),
-        children![]
     ))
     .with_children(|node| {
         let action_progress_bar = node.spawn((
             Node {
                 height: Val::Percent(100.0),
-                width: Val::Percent(/*action_progress.0*/ 100.0),
+                width: Val::Percent(action_progress.0),
+                align_content: AlignContent::Center,
                 ..default()
             },
             BackgroundColor(Color::srgb(1.0, 0.0, 0.0).into()),
+            Text::new(""),
         )).id();
 
         *res_action_progress_bar = ActionProgressBar(Some(action_progress_bar));
@@ -228,27 +224,33 @@ fn update_resources_sidebar(
 }
 
 fn update_action_progress_bar(
-    progress: Res<ActionProgress>,
+    progress: Res<incremental::actions::ActionProgress>,
     progress_bar: Res<ActionProgressBar>,
-    mut progress_bar_style_query: Query<(&mut Node,)>,
+    mut progress_bar_style_query: Query<&mut Node>,
 ) {
     if let Some(progress_bar) = progress_bar.0 {
         let Ok(mut node) = progress_bar_style_query.get_mut(progress_bar) else { panic!("Progress bar entity must have a style.")};
 
-        node.0.width = Val::Px(400.0 * (1.) /*progress.0 */);
+        node.width = Val::Px(400.0 * progress.0);
     }
 }
 
 fn handle_action_click(
     query: Query<(&Interaction, &Actions), (Changed<Interaction>, With<Button>,)>,
-    mut stockyard: ResMut<Stockyard>,
+    // mut stockyard: ResMut<Stockyard>,
+    mut current_action: ResMut<CurrentAction>,
+    mut action_progress: ResMut<ActionProgress>,
 ) {
     for (interaction, action) in &query {
         match interaction {
             Interaction::Pressed => {
                 match action {
                     Actions::Explore => todo!(),
-                    Actions::GatherWood => { stockyard[StockKind::Wood] += 100; },
+                    Actions::GatherWood => {
+                        //stockyard[StockKind::Wood] += 100;
+                        current_action.0 = Some(Actions::GatherWood);
+                        action_progress.0 = 0.0;
+                    },
                     Actions::CreateFollowers => todo!(),
                 }
             },

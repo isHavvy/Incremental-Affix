@@ -16,9 +16,12 @@ use incremental::{IncrementalPlugin, Stockyard};
 
 fn main() {
     App::new()
-    .add_plugins(DefaultPlugins)
-    .add_plugins(IncrementalPlugin)
-    .add_plugins(ui::UiPlugin)
+    .add_plugins((
+        DefaultPlugins,
+        IncrementalPlugin,
+        incremental::actions::ActionPlugin,
+        ui::UiPlugin,
+    ))
     .run();
 }
 
