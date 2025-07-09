@@ -1,6 +1,6 @@
 use bevy::{color::palettes::css::BLACK, ecs::relationship::RelatedSpawnerCommands, prelude::*};
 
-use crate::incremental::{self, actions::{ActionProgress, Actions, CurrentAction}, screens::Screens, StockKind, Stockyard};
+use crate::incremental::{self, actions::{ActionProgress, Actions, CurrentAction}, screens::Screen, StockKind, Stockyard};
 
 #[derive(Debug, Default, Resource)]
 pub struct ActionProgressBar(Option<Entity>);
@@ -14,6 +14,7 @@ impl Plugin for UiPlugin {
         .add_systems(Startup, setup)
         .add_systems(Update, (
             handle_action_click,
+            handle_screen_click,
             update_resources_sidebar,
             update_action_progress_bar
         ))
@@ -31,7 +32,7 @@ fn setup(
 
     commands.spawn(Camera2d::default());
 
-    let mut root_node = commands.spawn((
+    let root_node = commands.spawn((
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -39,66 +40,102 @@ fn setup(
             //justify_content: JustifyContent::Center,
             ..default()
         },
-    ));
+    ))
+    .id();
 
-    root_node.with_children(|root_node| {
-        root_node
-        .spawn((
-            Node {
-                width: Val::Percent(20.0),
-                height: Val::Percent(100.0),
-                flex_direction: FlexDirection::Column,
-                border: UiRect::right(Val::Px(2.0)),
-                ..default()
-            },
-            BackgroundColor(Color::WHITE.into()),
-            BorderColor(Color::BLACK),
-        ))
-        .with_children(|sidebar| { setup_resources_sidebar(sidebar, font.clone()); })
-        ;
+    let sidebar = commands.spawn((
+        Node {
+            width: Val::Percent(20.0),
+            height: Val::Percent(100.0),
+            flex_direction: FlexDirection::Column,
+            border: UiRect::right(Val::Px(2.0)),
+            ..default()
+        },
+        BackgroundColor(Color::WHITE.into()),
+        BorderColor(Color::BLACK),
+        ChildOf(root_node)
+    ))
+    .id();
 
-        root_node
-        .spawn(Node {
+    setup_resources_sidebar(&mut commands, sidebar, font.clone());
+
+    commands.spawn((
+        Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
             flex_direction: FlexDirection::Column,
             border: UiRect::bottom(Val::Px(2.0)),
             ..default()
-        })
-        .with_children(|right_zone| {
-            // Top bar with the screen switching stuff.
-            right_zone.spawn((
-                Node {
-                    height: Val::Px(48.0),
-                    width: Val::Percent(100.0),
-                    ..default()
-                },
-                BackgroundColor(Color::srgb(0.0, 0.8, 0.0).into()),
-            ))
-            .with_children(|top_bar| { setup_screens_bar(top_bar, font.clone()); });
+        },
+        ChildOf(root_node)
+    ))
+    .with_children(|right_zone| {
+        // Top bar with the screen switching stuff.
+        right_zone.spawn((
+            Node {
+                height: Val::Px(48.0),
+                width: Val::Percent(100.0),
+                ..default()
+            },
+            BackgroundColor(Color::srgb(0.0, 0.8, 0.0).into()),
+        ))
+        .with_children(|top_bar| { setup_screens_bar(top_bar, font.clone()); });
 
-            // Main Content Zone
-            right_zone.spawn((
-                Node {
-                    flex_direction: FlexDirection::Column,
-                    height: Val::Percent(100.0),
-                    ..default()
-                },
-                BackgroundColor(Color::WHITE.into()),
-            ))
-            .with_children(|zone| initialize_actions(
-                zone,
-                font.clone(),
-                &action_progress,
-                action_progress_bar)
-            )
-            ;
-        });
+        // Main Content Zone
+        right_zone.spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                height: Val::Percent(100.0),
+                ..default()
+            },
+            BackgroundColor(Color::WHITE.into()),
+            Screen::Act,
+        ))
+        .with_children(|zone| initialize_actions(
+            zone,
+            font.clone(),
+            &action_progress,
+            action_progress_bar)
+        )
+        ;
+
+        right_zone.spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                height: Val::Percent(100.0),
+                display: Display::None,
+                ..default()
+            },
+            BackgroundColor(Color::WHITE),
+            Screen::Craft,
+        ));
+
+        right_zone.spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                height: Val::Percent(100.0),
+                display: Display::None,
+                ..default()
+            },
+            BackgroundColor(Color::WHITE),
+            Screen::Inventory,
+        ));
+
+        right_zone.spawn((
+            Node {
+                flex_direction: FlexDirection::Column,
+                height: Val::Percent(100.0),
+                display: Display::None,
+                ..default()
+            },
+            BackgroundColor(Color::WHITE),
+            Screen::Population,
+        ));
     });
 }
 
-fn setup_resources_sidebar(sidebar: &mut RelatedSpawnerCommands<'_, ChildOf>, font: Handle<Font>) {
-    sidebar.spawn((
+fn setup_resources_sidebar(commands: &mut Commands, sidebar: Entity, font: Handle<Font>) {
+    commands.spawn((
         Text::new("Resources"),
         TextFont {
             font,
@@ -107,23 +144,23 @@ fn setup_resources_sidebar(sidebar: &mut RelatedSpawnerCommands<'_, ChildOf>, fo
         },
         TextColor(Color::srgb(0.9, 0.9, 0.9)),
         // margin: UiRect::bottom(Val::Px(20.0)),
+        ChildOf(sidebar),
     ));
 
-    for resource in crate::incremental::StockKind::LIST {
-        sidebar.spawn((
-            Node {
-                ..default()
-            },
-            Text::new("0.0 / 100"),
-            TextLayout::new_with_justify(JustifyText::Right),
-            TextColor(Color::BLACK.into()),
-            *resource,
-        ));
-    }
+    commands.spawn_batch(crate::incremental::StockKind::LIST.into_iter().map(move |resource| (
+        Node {
+            ..default()
+        },
+        Text::new("0.0 / 100"),
+        TextLayout::new_with_justify(JustifyText::Right),
+        TextColor(Color::BLACK.into()),
+        *resource,
+        ChildOf(sidebar)
+    )));
 }
 
 fn setup_screens_bar(bar: &mut RelatedSpawnerCommands<'_, ChildOf>, font: Handle<Font>) {
-    for screen in Screens::LIST.iter().cloned() {
+    for screen in Screen::LIST.iter().cloned() {
         bar.spawn((
             Button,
             Node {
@@ -135,10 +172,10 @@ fn setup_screens_bar(bar: &mut RelatedSpawnerCommands<'_, ChildOf>, font: Handle
                 margin: UiRect::right(Val::Px(5.0)),
                 ..default()
             },
-            BorderColor(Color::BLACK.into()),
+            BorderColor(Color::BLACK),
             children![
                 Text(screen.to_string()),
-                TextColor(Color::BLACK.into()),
+                TextColor(Color::BLACK),
                 TextFont {
                     font: font.clone(),
                     font_size: 20.0,
@@ -194,17 +231,17 @@ fn initialize_actions(
                 ..default()
             },
             BorderColor(Color::BLACK.into()),
-        ))
-        .with_child((
-            Button,
-            action,
-            Text::new(action.to_string()),
-            TextFont {
-                font: font.clone(),
-                font_size: 20.0,
-                ..default()
-            },
-            TextColor(Color::BLACK.into()),
+            children![(
+                Button,
+                action,
+                Text::new(action.to_string()),
+                TextFont {
+                    font: font.clone(),
+                    font_size: 20.0,
+                    ..default()
+                },
+                TextColor(Color::BLACK.into()),
+            )],
         ));
     }
 }
@@ -236,18 +273,30 @@ fn update_action_progress_bar(
 }
 
 fn handle_action_click(
-    query: Query<(&Interaction, &Actions), (Changed<Interaction>, With<Button>,)>,
+    button_query: Query<(&Interaction, &Actions), (Changed<Interaction>, With<Button>,)>,
     // mut stockyard: ResMut<Stockyard>,
     mut current_action: ResMut<CurrentAction>,
     mut action_progress: ResMut<ActionProgress>,
 ) {
-    for (interaction, action) in &query {
+    for (interaction, action) in &button_query {
         match interaction {
             Interaction::Pressed => {
                 match action {
-                    Actions::Explore => todo!(),
+                    Actions::Explore => {
+                        // Don't reset progress if they re-clicked on the same action.
+                        if current_action.0 == Some(Actions::Explore) {
+                            continue;
+                        }
+                        
+                        current_action.0 = Some(Actions::Explore);
+                        action_progress.0 = 0.0
+                    },
                     Actions::GatherWood => {
-                        //stockyard[StockKind::Wood] += 100;
+                        // Don't reset progress if they re-clicked on the same action.
+                        if current_action.0 == Some(Actions::GatherWood) {
+                            continue;
+                        }
+
                         current_action.0 = Some(Actions::GatherWood);
                         action_progress.0 = 0.0;
                     },
@@ -256,6 +305,23 @@ fn handle_action_click(
             },
             Interaction::Hovered => {},
             Interaction::None => {},
+        }
+    }
+}
+
+fn handle_screen_click(
+    button_query: Query<(&Interaction, &Screen), (Changed<Interaction>, With<Button>)>,
+    mut screen_query: Query<(&mut Node, &Screen), Without<Button>>,
+) {
+    for (interaction, next_visible_screen) in &button_query {
+        match interaction {
+            Interaction::Pressed => {},
+            Interaction::Hovered => continue,
+            Interaction::None => continue,
+        }
+
+        for (mut screen_node, screen) in &mut screen_query {
+            screen_node.display = if screen == next_visible_screen { Display::Block } else { Display::None };
         }
     }
 }

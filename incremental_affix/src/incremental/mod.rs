@@ -10,12 +10,17 @@ pub struct IncrementalPlugin;
 impl Plugin for IncrementalPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
+        .init_resource::<ExplorationProgress>()
         .init_resource::<Stockyard>()
         .insert_resource(TickTimer(Timer::from_seconds(1.0, TimerMode::Repeating)))
         .add_systems(Update, (tick_stockyard_system,))
         ;
     }
 }
+
+/// For the early game Explore action.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Resource)]
+pub struct ExplorationProgress(u32);
 
 /// A numeric resource controlled by the player.
 /// 
@@ -25,23 +30,26 @@ pub enum StockKind {
     Godpower,
     Followers,
     Wood,
+    Stone,
 }
 
 impl StockKind {
     pub const LIST: &'static [Self] = &[
         Self::Godpower,
         Self::Followers,
-        Self::Wood
+        Self::Wood,
+        Self::Stone,
     ];
 }
 
 impl ToString for StockKind {
     fn to_string(&self) -> String {
         match self {
-            StockKind::Godpower => "Godpower".to_string(),
-            StockKind::Followers => "Followers".to_string(),
-            StockKind::Wood => "Wood".to_string(),
-        }
+            StockKind::Godpower => "Godpower",
+            StockKind::Followers => "Followers",
+            StockKind::Wood => "Wood",
+            StockKind::Stone => "Stone",
+        }.to_string()
     }
 }
 
@@ -73,6 +81,7 @@ impl Default for Stockyard {
         resources.insert(StockKind::Godpower, Stock::new(0, None));
         resources.insert(StockKind::Followers, Stock::new(0, Some(10 * 100)));
         resources.insert(StockKind::Wood, Stock::new(0, Some(100 * 100)));
+        resources.insert(StockKind::Stone, Stock::new(0, Some(100 * 100)));
 
         Self(resources)
     }

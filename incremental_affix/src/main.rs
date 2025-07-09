@@ -12,8 +12,6 @@ use engine::item;
 use bevy::prelude::*;
 use incremental::{IncrementalPlugin, Stockyard};
 
-
-
 fn main() {
     App::new()
     .add_plugins((
