@@ -17,6 +17,7 @@ fn main() {
     .add_plugins((
         DefaultPlugins,
         IncrementalPlugin,
+        incremental::log::GameLogPlugin,
         incremental::actions::ActionPlugin,
         ui::UiPlugin,
     ))

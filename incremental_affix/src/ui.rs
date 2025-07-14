@@ -59,7 +59,7 @@ fn setup(
 
     setup_resources_sidebar(&mut commands, sidebar, font.clone());
 
-    commands.spawn((
+    commands.reborrow().spawn((
         Node {
             width: Val::Percent(100.0),
             height: Val::Percent(100.0),
@@ -132,6 +132,8 @@ fn setup(
             Screen::Population,
         ));
     });
+
+    super::incremental::log::GameLogPlugin::make_log_ui(commands, root_node);
 }
 
 fn setup_resources_sidebar(commands: &mut Commands, sidebar: Entity, font: Handle<Font>) {

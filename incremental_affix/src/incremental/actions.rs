@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::incremental::{ExplorationProgress, StockKind, Stockyard};
+use crate::incremental::{log::LogEvent, ExplorationProgress, StockKind, Stockyard};
 
 #[derive(Debug, Default, Resource)]
 pub struct ActionProgress(pub f32);
@@ -51,6 +51,7 @@ fn progress_system(
     current_action: Res<CurrentAction>,
     mut stockyard: ResMut<Stockyard>,
     mut exploration_progress: ResMut<ExplorationProgress>,
+    mut log_event_writer: EventWriter<super::log::LogEvent>,
 ) {
     let current_action = match current_action.0 {
         None => return,
@@ -75,6 +76,7 @@ fn progress_system(
                     1 => {
                         stockyard[StockKind::Wood] += 500;
                         stockyard[StockKind::Stone] += 500;
+                        log_event_writer.write(LogEvent("While exploring, you find some twigs and rocks on the ground.".to_string()));
                     },
                     _ => {}
                 }

@@ -4,6 +4,7 @@ use bevy::prelude::*;
 
 pub mod actions;
 pub mod screens;
+pub mod log;
 
 pub struct IncrementalPlugin;
 
