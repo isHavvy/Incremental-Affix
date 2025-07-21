@@ -1,5 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
+use bevy::ecs::component::Component;
 use rand::Rng;
 
 pub trait ModifierKind: Clone + Copy + 'static {
@@ -180,7 +181,7 @@ pub(crate) enum PushAffixError {
     AffixiveItemQualityTooLow,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub(crate) struct AffixiveItem<MK: ModifierKind> {
     base_ix: AffixiveItemBaseIndex,
     implicits: Vec<Implicit<MK>>,
@@ -206,6 +207,10 @@ impl<MK> AffixiveItem<MK> where MK: ModifierKind {
             quality,
             tags: base.tags.clone(),
         }
+    }
+
+    pub(crate) fn name<'bases>(&self, bases: &'bases [AffixiveItemBase]) -> &'bases str {
+        &bases[self.base_ix.0].name
     }
 
     pub(crate) fn display(&self, bases: &[AffixiveItemBase]) -> String {

@@ -1,7 +1,6 @@
 mod engine;
 //#[path = "game"]
 //mod game_old;
-mod ui;
 mod incremental;
 
 //use engine::drop_table;
@@ -10,15 +9,15 @@ use engine::item;
 // use game::player::Player;
 
 use bevy::prelude::*;
-use incremental::{IncrementalPlugin, Stockyard};
+use incremental::*;
 
 fn main() {
     App::new()
     .add_plugins((
         DefaultPlugins,
         IncrementalPlugin,
-        incremental::log::GameLogPlugin,
-        incremental::actions::ActionPlugin,
+        ui::log::GameLogPlugin,
+        incremental::action::ActionPlugin,
         ui::UiPlugin,
     ))
     .run();

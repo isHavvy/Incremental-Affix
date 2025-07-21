@@ -1,10 +1,10 @@
-use std::{collections::HashMap, ops::{AddAssign, Index, IndexMut}};
+use std::{collections::HashMap, ops::{AddAssign, Index, IndexMut, SubAssign}};
 
 use bevy::prelude::*;
 
-pub mod actions;
-pub mod screens;
-pub mod log;
+pub mod action;
+pub mod item;
+pub mod ui;
 
 pub struct IncrementalPlugin;
 
@@ -13,6 +13,7 @@ impl Plugin for IncrementalPlugin {
         app
         .init_resource::<ExplorationProgress>()
         .init_resource::<Stockyard>()
+        .init_resource::<item::ItemDatabase>()
         .insert_resource(TickTimer(Timer::from_seconds(1.0, TimerMode::Repeating)))
         .add_systems(Update, (tick_stockyard_system,))
         ;
@@ -24,10 +25,9 @@ impl Plugin for IncrementalPlugin {
 pub struct ExplorationProgress(u32);
 
 /// A numeric resource controlled by the player.
-/// 
-/// Because Bevy already takes Resource.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Component)]
 pub enum StockKind {
+    BranchesAndPebbles,
     Godpower,
     Followers,
     Wood,
@@ -36,6 +36,7 @@ pub enum StockKind {
 
 impl StockKind {
     pub const LIST: &'static [Self] = &[
+        Self::BranchesAndPebbles,
         Self::Godpower,
         Self::Followers,
         Self::Wood,
@@ -46,6 +47,7 @@ impl StockKind {
 impl ToString for StockKind {
     fn to_string(&self) -> String {
         match self {
+            StockKind::BranchesAndPebbles => "Branches and Pebbles",
             StockKind::Godpower => "Godpower",
             StockKind::Followers => "Followers",
             StockKind::Wood => "Wood",
@@ -68,7 +70,13 @@ impl Stock {
 
 impl AddAssign<i64> for Stock {
     fn add_assign(&mut self, change: i64) {
-        self.current = i64::min(self.maximum.unwrap_or(i64::MAX), self.current + change);
+        self.current = i64::clamp(self.current + change, 0, self.maximum.unwrap_or(i64::MAX));
+    }
+}
+
+impl SubAssign<i64> for Stock {
+    fn sub_assign(&mut self, neg_change: i64) {
+        self.current = i64::clamp(self.current - neg_change, 0, self.maximum.unwrap_or(i64::MAX));
     }
 }
 
@@ -79,6 +87,7 @@ impl Default for Stockyard {
     fn default() -> Self {
         let mut resources = HashMap::new();
 
+        resources.insert(StockKind::BranchesAndPebbles, Stock::new(0, None));
         resources.insert(StockKind::Godpower, Stock::new(0, None));
         resources.insert(StockKind::Followers, Stock::new(0, Some(10 * 100)));
         resources.insert(StockKind::Wood, Stock::new(0, Some(100 * 100)));

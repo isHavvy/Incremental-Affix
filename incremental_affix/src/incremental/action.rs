@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::incremental::{log::LogEvent, ExplorationProgress, StockKind, Stockyard};
+use crate::incremental::{ui::log::LogEvent, ExplorationProgress, StockKind, Stockyard};
 
 #[derive(Debug, Default, Resource)]
 pub struct ActionProgress(pub f32);
@@ -12,6 +12,7 @@ pub struct CurrentAction(pub Option<Actions>);
 pub enum Actions {
     Explore,
     GatherWood,
+    GatherStone,
     CreateFollowers,
 }
 
@@ -19,6 +20,7 @@ impl Actions {
     pub const LIST: &[Self] = &[
         Self::Explore,
         Self::GatherWood,
+        Self::GatherStone,
         Self::CreateFollowers,
     ];
 }
@@ -28,6 +30,7 @@ impl std::fmt::Display for Actions {
         f.write_str(match *self {
             Self::Explore => "Explore",
             Self::GatherWood => "Gather Wood",
+            Self::GatherStone => "Gather Stone",
             Self::CreateFollowers => "Create Followers",
         })
     }
@@ -51,7 +54,7 @@ fn progress_system(
     current_action: Res<CurrentAction>,
     mut stockyard: ResMut<Stockyard>,
     mut exploration_progress: ResMut<ExplorationProgress>,
-    mut log_event_writer: EventWriter<super::log::LogEvent>,
+    mut log_event_writer: EventWriter<LogEvent>,
 ) {
     let current_action = match current_action.0 {
         None => return,
@@ -74,8 +77,7 @@ fn progress_system(
                 match exploration_progress.0 {
                     0 => {},
                     1 => {
-                        stockyard[StockKind::Wood] += 500;
-                        stockyard[StockKind::Stone] += 500;
+                        stockyard[StockKind::BranchesAndPebbles] += 1;
                         log_event_writer.write(LogEvent("While exploring, you find some twigs and rocks on the ground.".to_string()));
                     },
                     _ => {}
@@ -83,6 +85,9 @@ fn progress_system(
             },
             Actions::GatherWood => {
                 stockyard[StockKind::Wood] += 100;
+            }
+            Actions::GatherStone => {
+                stockyard[StockKind::Stone] += 100;
             }
             Actions::CreateFollowers => todo!(),
         }
