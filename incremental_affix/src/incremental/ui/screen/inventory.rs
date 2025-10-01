@@ -22,13 +22,14 @@ pub fn spawn_inventory_screen(mut commands: Commands, parent: Entity) {
     let inventory_screen = commands.spawn((
         Node {
             display: Display::None,
+
             flex_direction: FlexDirection::Column,
-            height: percent(100),
-            width: percent(100),
+
             ..default()
         },
-        BackgroundColor(Color::srgb_u8(238, 223, 187)),
+
         Screen::Inventory,
+
         ChildOf(parent),
     )).id();
 
@@ -36,7 +37,7 @@ pub fn spawn_inventory_screen(mut commands: Commands, parent: Entity) {
         Node {
             flex_direction: FlexDirection::Row,
             height: px(150),
-            width: percent(10),
+            
             ..default()
         },
         BackgroundColor(Color::srgb_u8(137, 81, 41)),
@@ -87,7 +88,7 @@ pub fn spawn_inventory_item(
     item_entity: Entity,
     item_name: String,
 ) {
-    let container = commands.spawn((
+    let line = commands.spawn((
         Node {
         ..default()
         },
@@ -105,14 +106,18 @@ pub fn spawn_inventory_item(
         Button,
         observe(on_activate_button_equip),
 
-        Text::new("E"),
+        children![(
+            Text::new("E"),
+            TextColor(Color::BLACK),
+        )],
 
-        ChildOf(container),
+        ChildOf(line),
     ));
 
     commands.spawn((
         Text(item_name),
-        ChildOf(container)
+        TextColor(Color::BLACK),
+        ChildOf(line)
     ));
 }
 

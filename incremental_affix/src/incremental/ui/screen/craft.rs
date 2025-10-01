@@ -6,36 +6,57 @@ use bevy::ui_widgets::{observe, Activate, Button};
 use crate::incremental::{item::{Base, ItemDatabase}, StockKind, Stockyard};
 use super::Screen;
 
-pub fn spawn_crafting_screen(mut commands: Commands, parent: Entity) {
+pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity, font: Handle<Font>) {
     let screen = commands.spawn((
         Node {
-            flex_direction: FlexDirection::Column,
-            height: Val::Percent(100.0),
-            width: Val::Percent(100.0),
             display: Display::None,
+
+            flex_direction: FlexDirection::Column,
+
             ..default()
         },
-        BackgroundColor(Color::srgb_u8(238, 223, 187)),
+
         Screen::Craft,
-        ChildOf(parent)
+
+        ChildOf(parent_node)
     )).id();
 
     commands.spawn((
+        Node::default(),
+
+        children![(
+            Text::new("Craft"),
+            TextColor(Color::BLACK),
+            TextFont {
+                font,
+                font_size: 32.,
+                ..default()
+            }
+        )],
+
+        ChildOf(screen)
+    ));
+
+    commands.spawn((
         Node {
-            height: px(100),
             width: px(200),
+
+            border: px(1).all(),
+
             ..default()
         },
+        BorderColor::all(Color::BLACK),
 
         Button,
+        Base::MakeshiftTools,
         observe(handle_craft_button_click),
 
-        Base::MakeshiftTools,
+        children![(
+            Text::new("Makeshift Tools"),
+            TextColor(Color::BLACK),
+        )],
 
         ChildOf(screen),
-        children![
-            Text("Makeshift Tools".to_string()),
-        ],
     ));
 }
 

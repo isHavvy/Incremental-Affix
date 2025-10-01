@@ -137,6 +137,7 @@ impl AffixiveItem {
         output
     }
 
+    #[expect(unused)]
     pub fn level(&self, bases: &[AffixiveItemBase]) -> u8 {
         let base = &bases[self.base_ix.inner()];
 
@@ -146,6 +147,7 @@ impl AffixiveItem {
     /// Attempt to attach a prefix to this item.
     /// 
     /// Return Ok(()) if the prefix was added.
+    #[expect(unused)]
     pub fn try_push_prefix(&mut self, prefix: Prefix) -> Result<(), PushAffixError> {
         match self.quality {
             Quality::FixedArtifact => Err(PushAffixError::AffixiveItemIsFixed),
@@ -160,6 +162,7 @@ impl AffixiveItem {
     /// Attempt to attach a suffix to this item.
     /// 
     /// Return Ok(()) if the suffix was added.
+    #[expect(unused)]
     pub fn try_push_suffix(&mut self, suffix: Suffix) -> Result<(), PushAffixError> {
         match self.quality {
             Quality::FixedArtifact => Err(PushAffixError::AffixiveItemIsFixed),
@@ -171,6 +174,7 @@ impl AffixiveItem {
         }
     }
 
+    #[expect(unused)]
     pub fn modifiers(&self) -> impl Iterator<Item=(&Modifier, ModifierValue)> {
         self.implicits.iter().map(|implicit| &**implicit)
         .chain({ let x = self.prefixes.iter().map(|prefix| &**prefix); x })

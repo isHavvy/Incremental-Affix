@@ -4,7 +4,7 @@ mod stocks;
 
 use bevy::prelude::*;
 
-use crate::incremental::{self, ui::screen::{action::ActionProgressBar, setup_screens_bar, spawn_screens_ui, Screen}};
+use crate::incremental::{self, ui::screen::action::ActionProgressBar};
 
 pub struct UiPlugin;
 

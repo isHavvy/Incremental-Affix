@@ -44,6 +44,7 @@ impl ItemDatabase {
         Self { bases, implicits }
     }
 
+    #[expect(unused)]
     pub fn get_base(&self, base: Base) -> &AffixiveItemBase {
         let ix = match base {
             Base::MakeshiftTools => 0,

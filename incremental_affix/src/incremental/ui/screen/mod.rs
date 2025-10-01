@@ -44,17 +44,19 @@ pub fn spawn_screens_ui(
         Node {
             height: px(48),
             width: percent(100),
+
+            align_self: AlignSelf::Center,
+
             ..default()
         },
         BackgroundColor(Color::srgb(0.0, 0.8, 0.0).into()),
         ChildOf(parent_ui_node)
     )).id();
 
-    setup_screens_bar(commands.reborrow(), screen_select_bar, font.clone());
-
     let screen_container = commands.spawn((
         Node {
             flex_grow: 1.,
+            overflow: Overflow::scroll_y(),
 
             padding: UiRect { left: px(10), right: px(0), top: px(10), bottom: px(0) },
 
@@ -64,8 +66,9 @@ pub fn spawn_screens_ui(
         ChildOf(parent_ui_node),
     )).id();
 
-    action::initialize_actions_screen(commands.reborrow(), screen_container, font, &action_progress, action_progress_bar);
-    craft::spawn_crafting_screen(commands.reborrow(), screen_container);
+    setup_screens_bar(commands.reborrow(), screen_select_bar, font.clone());
+    action::initialize_actions_screen(commands.reborrow(), screen_container, font.clone(), &action_progress, action_progress_bar);
+    craft::spawn_crafting_screen(commands.reborrow(), screen_container, font.clone());
     inventory::spawn_inventory_screen(commands.reborrow(), screen_container);
     spawn_population_screen(commands.reborrow(), screen_container);
 }
@@ -92,11 +95,10 @@ pub fn setup_screens_bar(mut commands: Commands, bar: Entity, font: Handle<Font>
         commands.spawn((
             Node {
                 height: px(40),
-                width: Val::Auto,
+
                 border: px(2).all(),
                 margin: px(5).right(),
 
-                justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
                 
                 ..default()
@@ -104,19 +106,20 @@ pub fn setup_screens_bar(mut commands: Commands, bar: Entity, font: Handle<Font>
             BorderColor::all(Color::BLACK),
 
             Button,
+            screen,
             observe(on_activate_button_screen_change),
 
-            ChildOf(bar),
-            children![
+            children![(
                 Text(screen.to_string()),
-                TextColor(Color::BLACK),
+                TextColor(Color::WHITE),
                 TextFont {
                     font: font.clone(),
                     font_size: 20.0,
                     ..default()
                 },
-            ],
-            screen
+            )],
+
+            ChildOf(bar),
         ));
     }
 }

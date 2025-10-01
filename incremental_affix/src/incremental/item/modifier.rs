@@ -167,23 +167,10 @@ impl Modifiers {
 }
 
 pub(crate) fn initialize_implicits() -> Vec<Implicit> {
-    let mut mods = vec![];
-
-    mods.push(Affix {
-        name: "CanChopWood".to_string(),
-        modifier: Modifier { kind: Modifiers::CanChopWood, min: 1, max: 1 },
-        modifier_actual: 1,
-        hybrid_modifier: None,
-        hybrid_modifier_actual: 0,
-    });
-
-    mods.push(Affix {
-        name: "CanMineStone".to_string(),
-        modifier: Modifier { kind: Modifiers::CanMineStone, min: 1, max: 1 },
-        modifier_actual: 1,
-        hybrid_modifier: None,
-        hybrid_modifier_actual: 0,
-    });
+    let mods = vec![
+        Affix::new("CanChopWood".to_string(), Modifier { kind: Modifiers::CanChopWood, min: 1, max: 1 }),
+        Affix::new("CanMineStone".to_string(), Modifier { kind: Modifiers::CanMineStone, min: 1, max: 1 })
+    ];
 
     mods.into_iter().map(Implicit).collect()
 }
