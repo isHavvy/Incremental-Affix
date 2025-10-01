@@ -8,12 +8,13 @@ impl GameLogPlugin {
     /// Builds the log UI and registers the the game log ui entity for the system.
     /// 
     /// Only call once in the application.
-    pub fn make_log_ui(mut commands: Commands, parent: Entity) {
+    pub fn setup_log_ui(mut commands: Commands, parent: Entity) {
         let log_ui = commands.spawn((
             ChildOf(parent),
             Node {
                 ..default()
-            }
+            },
+            BackgroundColor(Color::srgb_u8(15, 15, 15)),
         )).id();
 
         commands.insert_resource(LogUi(log_ui));
@@ -34,21 +35,21 @@ impl LogUi {
 //     logs: Vec<String>,
 // }
 
-#[derive(Debug, Event)]
-pub struct LogEvent(pub String);
+#[derive(Debug, Message)]
+pub struct LogMessage(pub String);
 
 impl Plugin for GameLogPlugin {
     fn build(&self, app: &mut App) {
         app
         //.init_resource::<Log>()
-        .add_event::<LogEvent>()
+        .add_message::<LogMessage>()
         .add_systems(Update, (handle_log_event,));
     }
 }
 
 fn handle_log_event(
     mut commands: Commands,
-    mut log_events: EventReader<LogEvent>,
+    mut log_events: MessageReader<LogMessage>,
     log_ui: Res<LogUi>,
 ) {
     for event in log_events.read() {

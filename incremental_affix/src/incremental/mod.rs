@@ -1,4 +1,8 @@
-use std::{collections::HashMap, ops::{AddAssign, Index, IndexMut, SubAssign}};
+//! We call them stocks and not resources because Bevy already uses Resource as a term.
+//! 
+//! Anywhere we call them stocks in the codebase, we refer to them as resources to the player.
+
+use std::{collections::HashMap, fmt::Write, ops::{AddAssign, Deref, DerefMut, Index, IndexMut, SubAssign}};
 
 use bevy::prelude::*;
 
@@ -14,6 +18,7 @@ impl Plugin for IncrementalPlugin {
         .init_resource::<ExplorationProgress>()
         .init_resource::<Stockyard>()
         .init_resource::<item::ItemDatabase>()
+        .init_resource::<item::equipment::Slots>()
         .insert_resource(TickTimer(Timer::from_seconds(1.0, TimerMode::Repeating)))
         .add_systems(Update, (tick_stockyard_system,))
         ;
@@ -56,6 +61,7 @@ impl ToString for StockKind {
     }
 }
 
+/// A numeric resource held by the player.
 pub struct Stock {
     pub current: i64,
     pub maximum: Option<i64>,
@@ -77,6 +83,17 @@ impl AddAssign<i64> for Stock {
 impl SubAssign<i64> for Stock {
     fn sub_assign(&mut self, neg_change: i64) {
         self.current = i64::clamp(self.current - neg_change, 0, self.maximum.unwrap_or(i64::MAX));
+    }
+}
+
+impl Stock {
+    /// Push to a string the amount of stock is held and the maximum.
+    fn push_str(&self, string: &mut String) {
+        write!(string, "{}.{:0>2}", self.current / 100, self.current % 100).expect("Writing to a string should work.");
+
+        if let Some(maximum) = self.maximum {
+            write!(string, "/ {}", maximum / 100).expect("Writing to a string should work.");
+        }
     }
 }
 
@@ -112,7 +129,7 @@ impl IndexMut<StockKind> for Stockyard {
 }
 
 fn tick_stockyard_system(time: Res<Time>, mut tick_timer: ResMut<TickTimer>, mut stockyard: ResMut<Stockyard>) {
-    if tick_timer.0.tick(time.delta()).just_finished() {
+    if tick_timer.tick(time.delta()).just_finished() {
         for (_key, stock) in &mut stockyard.0 {
             debug!("{}", stock.change);
             stock.current += stock.change;
@@ -122,3 +139,17 @@ fn tick_stockyard_system(time: Res<Time>, mut tick_timer: ResMut<TickTimer>, mut
 
 #[derive(Resource)]
 struct TickTimer(Timer);
+
+impl Deref for TickTimer {
+    type Target = Timer;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for TickTimer {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}

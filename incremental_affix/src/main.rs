@@ -15,6 +15,7 @@ fn main() {
     App::new()
     .add_plugins((
         DefaultPlugins,
+        bevy::ui_widgets::ButtonPlugin,
         IncrementalPlugin,
         ui::log::GameLogPlugin,
         incremental::action::ActionPlugin,

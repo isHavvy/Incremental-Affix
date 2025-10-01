@@ -8,5 +8,5 @@ resolver = "2"
 
 [dependencies]
 anymap = "0.12.1"
-bevy = "0.16"
+bevy = { version = "0.17", features = ["experimental_bevy_ui_widgets"] }
 rand = "0.8.5"

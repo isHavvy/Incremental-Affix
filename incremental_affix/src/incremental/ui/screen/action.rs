@@ -1,31 +1,46 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::Activate};
+use bevy::ui_widgets::{observe, Button};
 
 use crate::incremental::{action::{ActionProgress, Actions, CurrentAction}, ui::screen::Screen};
 
 #[derive(Debug, Default, Resource)]
 pub struct ActionProgressBar(Option<Entity>);
 
-pub fn initialize_actions(
+pub fn initialize_actions_screen(
     mut commands: Commands,
     parent: Entity,
     font: Handle<Font>,
-    action_progress: &crate::incremental::action::ActionProgress,
+    action_progress: &ActionProgress,
     mut res_action_progress_bar: ResMut<ActionProgressBar>,
 ) {
-    let action_progress_bar_outer = commands.spawn((
+    let screen = commands.spawn((
         Node {
-            border: UiRect::all(Val::Px(2.)),
-            height: Val::Px(25.0),
-            width: Val::Px(400.0),
-            justify_content: JustifyContent::FlexStart,
-            align_items: AlignItems::Center,
-            margin: UiRect::all(Val::Px(8.0)),
+            flex_direction: FlexDirection::Column,
+            flex_grow: 1.,
+
             ..default()
         },
-        BackgroundColor(Color::srgb_u8(238, 223, 187)),
-        BorderColor(Color::BLACK),
-        ChildOf(parent),
         Screen::Act,
+        ChildOf(parent)
+    )).id();
+
+    let action_progress_bar_outer = commands.spawn((
+        Node {
+            box_sizing: BoxSizing::BorderBox,
+            height: px(25),
+            width: px(400),
+
+            margin: px(8).all(),
+            border: px(2).all(),
+
+            justify_content: JustifyContent::FlexStart,
+            align_items: AlignItems::Center,
+
+            ..default()
+        },
+        BackgroundColor(Color::srgb_u8(255, 255, 255)),
+        BorderColor::all(Color::BLACK),
+        ChildOf(screen),
     )).id();
 
     let action_progress_bar = commands.spawn((
@@ -53,10 +68,11 @@ pub fn initialize_actions(
                 margin: UiRect::all(Val::Px(8.0)),
                 ..default()
             },
-            BorderColor(Color::BLACK.into()),
-            ChildOf(parent),
+            BorderColor::all(Color::BLACK),
+            ChildOf(screen),
             children![(
                 Button,
+                observe(on_press_button_action),
                 action,
                 Text::new(action.to_string()),
                 TextFont {
@@ -64,7 +80,7 @@ pub fn initialize_actions(
                     font_size: 20.0,
                     ..default()
                 },
-                TextColor(Color::BLACK.into()),
+                TextColor(Color::BLACK),
             )],
         ));
     }
@@ -82,48 +98,42 @@ pub fn update_action_progress_bar(
     }
 }
 
-pub fn handle_action_click(
-    button_query: Query<(&Interaction, &Actions), (Changed<Interaction>, With<Button>,)>,
-    // mut stockyard: ResMut<Stockyard>,
+fn on_press_button_action(
+    activate: On<Activate>,
+    actions_query: Query<&Actions>,
     mut current_action: ResMut<CurrentAction>,
     mut action_progress: ResMut<ActionProgress>,
 ) {
-    for (interaction, action) in &button_query {
-        match interaction {
-            Interaction::Pressed => {
-                match action {
-                    Actions::Explore => {
-                        // Don't reset progress if they re-clicked on the same action.
-                        if current_action.0 == Some(Actions::Explore) {
-                            continue;
-                        }
-                        
-                        current_action.0 = Some(Actions::Explore);
-                        action_progress.0 = 0.0
-                    },
-                    Actions::GatherWood => {
-                        // Don't reset progress if they re-clicked on the same action.
-                        if current_action.0 == Some(Actions::GatherWood) {
-                            continue;
-                        }
+    let new_action = actions_query.get(activate.entity).expect("Action button must have an action entity.");
 
-                        current_action.0 = Some(Actions::GatherWood);
-                        action_progress.0 = 0.0;
-                    },
-                    Actions::GatherStone => {
-                        // Don't reset progress if they re-clicked on the same action.
-                        if current_action.0 == Some(Actions::GatherStone) {
-                            continue;
-                        }
+    match new_action {
+        Actions::Explore => {
+            // Don't reset progress if they re-clicked on the same action.
+            if current_action.0 == Some(Actions::Explore) {
+                return;
+            }
+            
+            current_action.0 = Some(Actions::Explore);
+            action_progress.0 = 0.0
+        },
+        Actions::GatherWood => {
+            // Don't reset progress if they re-clicked on the same action.
+            if current_action.0 == Some(Actions::GatherWood) {
+                return;
+            }
 
-                        current_action.0 = Some(Actions::GatherStone);
-                        action_progress.0 = 0.0;
-                    }
-                    Actions::CreateFollowers => todo!(),
-                }
-            },
-            Interaction::Hovered => {},
-            Interaction::None => {},
+            current_action.0 = Some(Actions::GatherWood);
+            action_progress.0 = 0.0;
+        },
+        Actions::GatherStone => {
+            // Don't reset progress if they re-clicked on the same action.
+            if current_action.0 == Some(Actions::GatherStone) {
+                return;
+            }
+
+            current_action.0 = Some(Actions::GatherStone);
+            action_progress.0 = 0.0;
         }
+        Actions::CreateFollowers => todo!(),
     }
 }

@@ -1,43 +1,14 @@
 use bevy::ecs::{component::Component, resource::Resource};
 
-use crate::engine::item::{AffixiveItem, AffixiveItemBase, AffixiveItemBaseIndex, Modifier, ModifierKind, Quality};
+use affixive_item::{AffixiveItemBase, AffixiveItemBaseIndex, ImplicitIndex, Quality};
+use modifier::Modifiers;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Modifiers {
-    WoodBaseGain,
-    WoodMultiplier,
-    WoodAffinityChanceMultiplier,
-    WoodAffinityMultiplier,
-    WoodAffinityTimeMultiplier,
+use crate::incremental::item::{affixive_item::{AffixiveItem, ItemTag}, modifier::{initialize_implicits, Implicit}};
 
-    StoneBaseGain,
-    StoneMultiplier,
-    StoneAffinityChanceMultiplier,
-    StoneAffinityMultiplier,
-    StoneAffinityTimeMultiplier,
-}
-
-impl ModifierKind for Modifiers {
-    fn display_actual(&self, actual: i32) -> String {
-        fn sign(n: i32) -> char {
-            if n > 0 { '+' } else { '-' }
-        }
-
-        match *self {
-            Modifiers::WoodBaseGain => format!("{}{} Wood chopped per second", sign(actual), actual),
-            Modifiers::WoodMultiplier => format!("{}{}% Wood chopped per second", sign(actual), actual),
-            Modifiers::WoodAffinityChanceMultiplier => format!("{}{}% Wood affinity chance", sign(actual), actual),
-            Modifiers::WoodAffinityMultiplier => format!("{}{}% Wood affinity gain", sign(actual), actual),
-            Modifiers::WoodAffinityTimeMultiplier => format!("{}{}% Wood affinity time", sign(actual), actual),
-
-            Modifiers::StoneBaseGain => format!("{}{} Stone mined per second", sign(actual), actual),
-            Modifiers::StoneMultiplier => format!("{}{}% Stone mined per second", sign(actual), actual),
-            Modifiers::StoneAffinityChanceMultiplier => format!("{}{} Stone affinity chance", sign(actual), actual),
-            Modifiers::StoneAffinityMultiplier => format!("{}{}% Stone affinity gain", sign(actual), actual),
-            Modifiers::StoneAffinityTimeMultiplier => format!("{}{}% Sone affinity time", sign(actual), actual),
-        }
-    }
-}
+pub mod equipment;
+pub mod item_slot;
+pub mod affixive_item;
+pub mod modifier;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
 pub enum Base {
@@ -49,14 +20,17 @@ fn makeshift_tool() -> AffixiveItemBase {
         name: "Makeshift Tools".to_string(),
         level: 0,
         tags: vec![],
-        implicits: vec![],
+        implicits: vec![
+            ImplicitIndex(0),
+            ImplicitIndex(1),
+        ],
     }
 }
 
 #[derive(Debug, Resource)]
 pub struct ItemDatabase {
     bases: Vec<AffixiveItemBase>,
-    modifiers: Vec<Modifier<Modifiers>>,
+    implicits: Vec<Implicit>,
 }
 
 impl ItemDatabase {
@@ -65,9 +39,9 @@ impl ItemDatabase {
             makeshift_tool()
         ];
 
-        let modifiers = vec![];
+        let implicits = initialize_implicits();
 
-        Self { bases, modifiers }
+        Self { bases, implicits }
     }
 
     pub fn get_base(&self, base: Base) -> &AffixiveItemBase {
@@ -85,12 +59,21 @@ impl ItemDatabase {
     }
 
     /// Make a new item with no modifiers or modifier slots of the specified base.
-    pub fn create_basic(&self, base: Base) -> AffixiveItem<Modifiers> {
-        AffixiveItem::new(&self.bases, &[], Self::get_base_ix(base), Quality::Quality(0))
+    pub fn create_basic(&self, base: Base) -> AffixiveItem {
+        let implicits = &*self.implicits;
+        AffixiveItem::new(&self.bases, implicits, Self::get_base_ix(base), Quality::Quality(0))
     }
 
-    pub fn item_name(&self, item: &AffixiveItem<Modifiers>) -> &str {
+    pub fn item_has_tag(&self, item: &AffixiveItem, tag: ItemTag) -> bool {
+        item.tags.contains(&tag)
+    }
+
+    pub fn item_name(&self, item: &AffixiveItem) -> &str {
         item.name(&self.bases)
+    }
+
+    pub fn display_item(&self, item: &AffixiveItem) -> String {
+        item.display(&self.bases)
     }
 }
 

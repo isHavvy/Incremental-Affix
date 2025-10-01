@@ -149,7 +149,6 @@ impl AffixiveItemBaseIndex {
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub struct ImplicitIndex(pub usize);
 
-
 // TODO(Havvy): This should be in game, not engine!
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum AffixiveItemTag {
