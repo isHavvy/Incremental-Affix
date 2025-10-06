@@ -1,6 +1,11 @@
 use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Activate, Button};
 
+use crate::incremental::action::{CanChop, CanMine};
+use crate::incremental::item::item_slot::ItemSlot;
+use crate::incremental::item::modifier::Modifiers;
+use crate::incremental::ui::item::spawn_item_details;
+use crate::incremental::ui::tooltip::{HideTooltip, ShowTooltip};
 use crate::incremental::{item::{affixive_item::{AffixiveItem, ItemTag}, item_slot::ItemSlotTag, ItemDatabase}, ui::screen::Screen};
 
 #[derive(Debug, Resource)]
@@ -37,7 +42,7 @@ pub fn spawn_inventory_screen(mut commands: Commands, parent: Entity) {
         Node {
             flex_direction: FlexDirection::Row,
             height: px(150),
-            
+
             ..default()
         },
         BackgroundColor(Color::srgb_u8(137, 81, 41)),
@@ -50,15 +55,16 @@ pub fn spawn_inventory_screen(mut commands: Commands, parent: Entity) {
     commands.insert_resource(InventoryScreen(inventory_screen));
 }
 
-fn spawn_slot(mut commands: Commands, parent: Entity, slot_kind: ItemSlotTag) -> Entity {
+fn spawn_slot(mut commands: Commands, parent: Entity, slot_tag: ItemSlotTag) -> Entity {
     let container = commands.spawn((
         Node {
+            flex_direction: FlexDirection::Column,
+
             box_sizing: BoxSizing::BorderBox,
             width: px(150),
             margin: px(4).all(),
             border: px(2).all(),
 
-            flex_direction: FlexDirection::Column,
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             
@@ -67,9 +73,13 @@ fn spawn_slot(mut commands: Commands, parent: Entity, slot_kind: ItemSlotTag) ->
         BorderColor::all(Color::BLACK),
         BackgroundColor(Color::srgb(0., 0.7, 0.)),
 
-        Text::new("Test"),
+        observe(on_slot_hover),
+        observe(on_out_hide_tooltip),
 
-        slot_kind,
+        ItemSlot {
+            tag: slot_tag,
+            item: None,
+        },
 
         ChildOf(parent),
     )).id();
@@ -83,22 +93,29 @@ fn spawn_slot(mut commands: Commands, parent: Entity, slot_kind: ItemSlotTag) ->
 }
 
 pub fn spawn_inventory_item(
-    commands: &mut Commands,
+    mut commands: Commands,
     inventory_screen: &InventoryScreen,
     item_entity: Entity,
     item_name: String,
 ) {
     let line = commands.spawn((
         Node {
-        ..default()
+            ..default()
         },
+
         CorrespondingItem(item_entity),
+
+        observe(on_inventory_hover),
+        observe(on_out_hide_tooltip),
+
         ChildOf(inventory_screen.get())
     )).id();
 
     commands.spawn((
         Node {
             border: px(1).all(),
+            margin: px(4).right(),
+
             ..default()
         },
         BorderColor::all(Color::BLACK),
@@ -123,30 +140,92 @@ pub fn spawn_inventory_item(
 
 pub fn on_activate_button_equip(
     activate: On<Activate>,
+    mut commands: Commands,
 
     item_database: Res<ItemDatabase>,
     active_slot: Res<ActiveSlot>,
+    inventory_screen: Res<InventoryScreen>,
+    item_db: Res<ItemDatabase>,
 
-    //button_query: Query<(&Interaction, &ChildOf), (Changed<Interaction>, With<Button>, With<EquipAction>)>,
+    mut can_chop: ResMut<CanChop>,
+    mut can_mine: ResMut<CanMine>,
+
     parent_query: Query<&ChildOf>,
     corresponding_item_query: Query<&CorrespondingItem>,
     item_query: Query<&AffixiveItem>,
-    item_slot_tag_query: Query<&ItemSlotTag>
+    mut item_slot_query: Query<&mut ItemSlot>
 ) {
-    let item_slot = parent_query.get(activate.entity).unwrap().parent();
-    let corresponding_item = corresponding_item_query.get(item_slot).unwrap().0;
-    let item = item_query
-    .get(corresponding_item)
-    .expect("Corresponding item entity must have an item.");
+    let item_node = parent_query.get(activate.entity).unwrap().parent();
+    let corresponding_item = corresponding_item_query.get(item_node).unwrap().0;
 
-    println!("{}", item_database.display_item(item));
+    let item = item_query.get(corresponding_item)
+    .expect("Corresponding item entity must have an item component.");
 
-    let item_slot_tag = *item_slot_tag_query.get(active_slot.0)
-    .expect("Active item slot must have a tag.");
+    let mut item_slot = item_slot_query.get_mut(active_slot.0)
+    .expect("Active slot resource must have an item slot component.");
 
-    let item_tag = ItemTag::from(item_slot_tag);
+    let item_tag = ItemTag::from(item_slot.tag);
 
     if !item_database.item_has_tag(item, item_tag) {
         return;
     }
+
+    // TODO(Havvy): Not hardcoded. If the action is active, stop if the tool can't continue.
+    **can_chop = false;
+    **can_mine = false;
+    for (modifier, _value) in item.modifiers() {
+        match modifier.kind {
+            Modifiers::CanChopWood => { **can_chop = true; },
+            Modifiers::CanMineStone => { **can_mine = true; },
+            _ => { /* don't care */ }
+        }
+    }
+
+    let previous_item = std::mem::replace(&mut item_slot.item, Some(corresponding_item));
+
+    if let Some(previous_item_entity) = previous_item {
+        let previous_item = item_query.get(previous_item_entity)
+        .expect("Item entity in an item slot must have an item entity.");
+
+        let name = item_db.item_name(previous_item);
+
+        spawn_inventory_item(commands.reborrow(), &*inventory_screen, previous_item_entity, name.to_string());
+    }
+    commands.entity(item_node).despawn();
+}
+
+fn on_inventory_hover(
+    event: On<Pointer<Over>>,
+    mut commands: Commands,
+
+    db: Res<ItemDatabase>,
+    corresponding_item_query: Query<&CorrespondingItem>,
+    item_query: Query<&AffixiveItem>,
+) {
+    let item_entity = corresponding_item_query.get(event.entity).expect("Corresponding item must be on this entity.").0;
+    let item = item_query.get(item_entity).expect("Item entity must have item component.");
+    let content = spawn_item_details(commands.reborrow(), item, &db);
+    commands.trigger(ShowTooltip { content });
+}
+
+fn on_slot_hover(
+    event: On<Pointer<Over>>,
+    mut commands: Commands,
+
+    db: Res<ItemDatabase>,
+    item_slot: Query<&ItemSlot>,
+    item_query: Query<&AffixiveItem>,
+) {
+    let item_slot = item_slot.get(event.entity).expect("Item slot node must have an item slot component.");
+    let Some(item_entity) = item_slot.item else { return /* if no item, no tooltip to show */; };
+    let item = item_query.get(item_entity).expect("Item entity must have item component.");
+    let content = spawn_item_details(commands.reborrow(), item, &db);
+    commands.trigger(ShowTooltip { content });
+}
+
+fn on_out_hide_tooltip(
+    _event: On<Pointer<Out>>,
+    mut commands: Commands,
+) {
+    commands.trigger(HideTooltip);
 }

@@ -54,12 +54,17 @@ fn spawn_stocks_stock_kind_line(mut commands: Commands, parent: Entity, stock_ki
 
 pub fn update_resources_sidebar(
     mut query: Query<(&mut Text, &StockKind)>,
-    stockyard: Res<Stockyard>,
+    mut stockyard: ResMut<Stockyard>,
 ) {
     for (mut text, stock_kind) in query.iter_mut() {
-        let stock = &stockyard[*stock_kind];
+        let stock = &mut stockyard[*stock_kind];
+
+        if !stock.has_changed() {
+            continue;
+        }
+
         text.clear();
-        stockyard[*stock_kind].push_str(&mut *text);
+        stock.push_str(&mut *text);
         **text = format!("{}.{:0>2}", stock.current / 100, stock.current % 100).into();
 
         if let Some(maximum) = stock.maximum {

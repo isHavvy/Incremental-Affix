@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Activate, Button};
 
 use crate::incremental;
+use crate::incremental::action::KnownActions;
 use crate::incremental::ui::screen::action::ActionProgressBar;
 
 pub mod action;
@@ -37,6 +38,7 @@ pub fn spawn_screens_ui(
     parent_ui_node: Entity,
     font: Handle<Font>,
     action_progress: Res<incremental::action::ActionProgress>,
+    known_actions: Res<KnownActions>,
     action_progress_bar: ResMut<ActionProgressBar>,
 ) {
     // Top bar with the screen switching stuff.
@@ -67,8 +69,14 @@ pub fn spawn_screens_ui(
     )).id();
 
     setup_screens_bar(commands.reborrow(), screen_select_bar, font.clone());
-    action::initialize_actions_screen(commands.reborrow(), screen_container, font.clone(), &action_progress, action_progress_bar);
-    craft::spawn_crafting_screen(commands.reborrow(), screen_container, font.clone());
+    action::initialize_actions_screen(
+        commands.reborrow(),
+        screen_container,
+        action_progress,
+        known_actions,
+        action_progress_bar
+    );
+    craft::spawn_crafting_screen(commands.reborrow(), screen_container);
     inventory::spawn_inventory_screen(commands.reborrow(), screen_container);
     spawn_population_screen(commands.reborrow(), screen_container);
 }

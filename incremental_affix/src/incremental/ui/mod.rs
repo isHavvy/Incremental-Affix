@@ -1,10 +1,12 @@
 pub mod screen;
 pub mod log;
 mod stocks;
+pub mod tooltip;
+pub mod item;
 
 use bevy::prelude::*;
 
-use crate::incremental::{self, ui::screen::action::ActionProgressBar};
+use crate::incremental::{self, action::KnownActions, ui::screen::action::ActionProgressBar};
 
 pub struct UiPlugin;
 
@@ -17,6 +19,7 @@ impl Plugin for UiPlugin {
             stocks::update_resources_sidebar,
             screen::action::update_action_progress_bar
         ))
+        .add_observer(screen::action::on_learn_action)
         ;
     }
 }
@@ -24,6 +27,7 @@ impl Plugin for UiPlugin {
 fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    known_actions: Res<KnownActions>,
     action_progress: Res<incremental::action::ActionProgress>,
     action_progress_bar: ResMut<ActionProgressBar>,
 ) {
@@ -74,6 +78,6 @@ fn setup(
     )).id();
 
     stocks::spawn_stocks_ui(&mut commands, sidebar, font.clone());
-    screen::spawn_screens_ui(commands.reborrow(), right_of_sidebar, font.clone(), action_progress, action_progress_bar);
+    screen::spawn_screens_ui(commands.reborrow(), right_of_sidebar, font.clone(), action_progress, known_actions, action_progress_bar);
     log::GameLogPlugin::setup_log_ui(commands, right_of_sidebar);
 }

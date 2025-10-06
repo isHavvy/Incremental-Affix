@@ -43,6 +43,7 @@ impl Affix {
         }
     }
 
+    #[allow(unused, reason = "Debug function")]
     pub fn display(&self) -> String {
         let mut output = String::new();
 

@@ -4,9 +4,7 @@ version = "0.1.0"
 edition = "2024"
 resolver = "2"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 anymap = "0.12.1"
-bevy = { version = "0.17", features = ["experimental_bevy_ui_widgets"] }
+bevy = { version = "0.17.2", features = ["experimental_bevy_ui_widgets", "bevy_dev_tools", "bevy_ui_debug"] }
 rand = "0.8.5"

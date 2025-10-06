@@ -1,12 +1,17 @@
 //! The crafting screen.
 
+use bevy::picking::hover::Hovered;
 use bevy::{prelude::*};
 use bevy::ui_widgets::{observe, Activate, Button};
 
-use crate::incremental::{item::{Base, ItemDatabase}, StockKind, Stockyard};
+use crate::incremental::item::bases::Base;
+use crate::incremental::ui::item::spawn_item_details;
+use crate::incremental::ui::screen::inventory::spawn_inventory_item;
+use crate::incremental::ui::tooltip;
+use crate::incremental::{item::ItemDatabase, StockKind, Stockyard};
 use super::Screen;
 
-pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity, font: Handle<Font>) {
+pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {
     let screen = commands.spawn((
         Node {
             display: Display::None,
@@ -28,7 +33,6 @@ pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity, font: 
             Text::new("Craft"),
             TextColor(Color::BLACK),
             TextFont {
-                font,
                 font_size: 32.,
                 ..default()
             }
@@ -37,27 +41,35 @@ pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity, font: 
         ChildOf(screen)
     ));
 
-    commands.spawn((
-        Node {
-            width: px(200),
+    for base in const { [Base::MakeshiftTools, Base::SecondaryTools] }.into_iter() {
+        commands.spawn((
+            Node {
+                width: px(200),
 
-            border: px(1).all(),
+                border: px(1).all(),
+                margin: px(5).bottom(),
 
-            ..default()
-        },
-        BorderColor::all(Color::BLACK),
+                ..default()
+            },
+            BorderColor::all(Color::BLACK),
 
-        Button,
-        Base::MakeshiftTools,
-        observe(handle_craft_button_click),
+            Button,
+            Hovered::default(),
+            base,
+            observe(handle_craft_button_click),
+            observe(handle_craft_button_hover),
+            observe(handle_craft_button_out),
 
-        children![(
-            Text::new("Makeshift Tools"),
-            TextColor(Color::BLACK),
-        )],
+            children![(
+                Text::new(base.to_string()),
+                TextColor(Color::BLACK),
 
-        ChildOf(screen),
-    ));
+                
+            )],
+
+            ChildOf(screen),
+        ));
+    };
 }
 
 pub fn handle_craft_button_click(
@@ -75,13 +87,43 @@ pub fn handle_craft_button_click(
             stockyard[StockKind::BranchesAndPebbles] -= 1;
 
             let item = item_db.create_basic(*base);
-            let name = item_db.item_name(&item).to_owned();
+            let name = item_db.item_name(&item).to_string();
 
             let item_entity = commands.spawn((
-                item_db.create_basic(*base),
+                item,
             )).id();
 
-            super::inventory::spawn_inventory_item(&mut commands, &*inventory_screen, item_entity, name);
+            spawn_inventory_item(commands.reborrow(), &*inventory_screen, item_entity, name);
         },
+
+        Base::SecondaryTools => {
+            let item = item_db.create_basic(*base);
+            let name = item_db.item_name(&item).to_string();
+
+            let item_entity = commands.spawn((
+                item,
+            )).id();
+
+            spawn_inventory_item(commands.reborrow(), &*inventory_screen, item_entity, name);
+        }
     }
+}
+
+fn handle_craft_button_hover(
+    event: On<Pointer<Over>>,
+    mut commands: Commands,
+
+    db: Res<ItemDatabase>,
+    base_query: Query<&Base>,
+) {
+    let base = base_query.get(event.entity).expect("This handler can only be on an entity with an item base.").clone();
+    let tooltip_content = spawn_item_details(commands.reborrow(), &db.create_basic(base), &db);
+    commands.trigger(tooltip::ShowTooltip { content: tooltip_content });
+}
+
+fn handle_craft_button_out(
+    _event: On<Pointer<Out>>,
+    mut commands: Commands,
+) {
+    commands.trigger(tooltip::HideTooltip);
 }

@@ -1,6 +1,8 @@
+use std::fmt::Display;
+
 use bevy::ecs::component::Component;
 
-use crate::incremental::item::{item_slot::ItemSlotTag, modifier::{Implicit, Modifier, ModifierValue, Prefix, Suffix}};
+use crate::incremental::item::{item_slot::ItemSlotTag, modifier::{Affix, Implicit, Modifier, ModifierValue, Prefix, Suffix}};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Quality {
@@ -29,6 +31,17 @@ pub struct ImplicitIndex(pub usize);
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum ItemTag {
     Tool,
+}
+
+impl Display for ItemTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let string = match self {
+            ItemTag::Tool => "Tool",
+        };
+
+        f.write_str(string)?;
+        Ok(())
+    }
 }
 
 impl From<ItemSlotTag> for ItemTag {
@@ -85,6 +98,11 @@ impl AffixiveItem {
         &bases[self.base_ix.0].name
     }
 
+    pub(crate) fn implicits(&self) -> impl Iterator<Item=&Affix> {
+        self.implicits.iter().map(|i| &i.0)
+    }
+
+    #[allow(unused, reason = "Debug function")]
     pub(crate) fn display(&self, bases: &[AffixiveItemBase]) -> String {
         let mut output = String::new();
 
@@ -174,7 +192,6 @@ impl AffixiveItem {
         }
     }
 
-    #[expect(unused)]
     pub fn modifiers(&self) -> impl Iterator<Item=(&Modifier, ModifierValue)> {
         self.implicits.iter().map(|implicit| &**implicit)
         .chain({ let x = self.prefixes.iter().map(|prefix| &**prefix); x })

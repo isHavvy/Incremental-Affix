@@ -8,18 +8,32 @@ use engine::item;
 // use game::modifiers::GameModifierKind;
 // use game::player::Player;
 
-use bevy::prelude::*;
+use bevy::{dev_tools::fps_overlay::{FpsOverlayConfig, FrameTimeGraphConfig}, prelude::*};
 use incremental::*;
 
 fn main() {
     App::new()
     .add_plugins((
         DefaultPlugins,
-        bevy::ui_widgets::ButtonPlugin,
+
         IncrementalPlugin,
+
         ui::log::GameLogPlugin,
         incremental::action::ActionPlugin,
+        ui::tooltip::TooltipPlugin,
         ui::UiPlugin,
+        bevy::dev_tools::fps_overlay::FpsOverlayPlugin {
+            config: FpsOverlayConfig {
+                enabled: false,
+                text_color: Color::BLACK,
+                frame_time_graph_config: FrameTimeGraphConfig {
+                    enabled: false,
+                    ..default()
+                },
+                ..default()
+            }
+        },
+        bevy::ui_widgets::ButtonPlugin,
     ))
     .run();
 }

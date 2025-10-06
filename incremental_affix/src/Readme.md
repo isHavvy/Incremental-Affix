@@ -1,7 +1,4 @@
-An affix is a prefix or suffix.
-They modify things.
-Items, character levels, enemies, even the world.
-Modify affixes to become stronger, and unlock new ways of modifying affixes.
+An incremental game about building affixive items to progress.
 
 If you've played an "ARPG" such as Path of Exile or Diablo, you've seen items drop with random modifers.
 This game is about focusing on that mechanic.

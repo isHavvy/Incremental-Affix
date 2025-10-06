@@ -20,7 +20,7 @@ impl Plugin for IncrementalPlugin {
         .init_resource::<item::ItemDatabase>()
         .init_resource::<item::equipment::Slots>()
         .insert_resource(TickTimer(Timer::from_seconds(1.0, TimerMode::Repeating)))
-        .add_systems(Update, (tick_stockyard_system,))
+        .add_systems(FixedUpdate, (tick_stockyard_system,))
         ;
     }
 }
@@ -63,25 +63,30 @@ impl ToString for StockKind {
 
 /// A numeric resource held by the player.
 pub struct Stock {
-    pub current: i64,
-    pub maximum: Option<i64>,
+    current: i64,
+    maximum: Option<i64>,
     pub change: i64,
+
+    /// Whether or not the stock has changed since UI has last looked at it.
+    has_changed: bool,
 }
 
 impl Stock {
     fn new(current: i64, maximum: Option<i64>) -> Self {
-        Self { current, maximum, change: 0, }
+        Self { current, maximum, change: 0, has_changed: true }
     }
 }
 
 impl AddAssign<i64> for Stock {
     fn add_assign(&mut self, change: i64) {
+        self.has_changed = true;
         self.current = i64::clamp(self.current + change, 0, self.maximum.unwrap_or(i64::MAX));
     }
 }
 
 impl SubAssign<i64> for Stock {
     fn sub_assign(&mut self, neg_change: i64) {
+        self.has_changed = true;
         self.current = i64::clamp(self.current - neg_change, 0, self.maximum.unwrap_or(i64::MAX));
     }
 }
@@ -94,6 +99,11 @@ impl Stock {
         if let Some(maximum) = self.maximum {
             write!(string, "/ {}", maximum / 100).expect("Writing to a string should work.");
         }
+    }
+
+    /// Check if the stock has changed since last time calling this function.
+    fn has_changed(&mut self) -> bool {
+        std::mem::replace(&mut self.has_changed, false)
     }
 }
 
