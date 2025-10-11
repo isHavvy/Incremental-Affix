@@ -6,7 +6,7 @@ use bevy::ui_widgets::{observe, Activate, Button};
 
 use crate::incremental::item::{base::Base, item_database::ItemDatabase, CraftEvent};
 use crate::incremental::stock::{StockKind, Stockyard};
-use crate::incremental::ui::{item::spawn_item_details, log::LogMessage, tooltip};
+use crate::ui::{item::spawn_item_details, log::LogMessage, tooltip};
 use super::Screen;
 
 pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {

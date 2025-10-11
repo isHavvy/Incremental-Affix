@@ -6,7 +6,8 @@ pub mod item;
 
 use bevy::prelude::*;
 
-use crate::incremental::{self, action::KnownActions, ui::screen::action::ActionProgressBar};
+use crate::incremental::{self, action::KnownActions};
+use screen::action::ActionProgressBar;
 
 pub struct UiPlugin;
 

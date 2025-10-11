@@ -5,9 +5,9 @@ use crate::incremental::item::equipment::Equipped;
 use crate::incremental::item::item_database::ItemDatabase;
 use crate::incremental::item::{item_slot::{ItemSlot, ItemSlotTag}, CraftEvent};
 use crate::incremental::item::{affixive_item::{AffixiveItem, ItemTag}};
-use crate::incremental::ui::tooltip::{HideTooltip, ShowTooltip};
-use crate::incremental::ui::item::spawn_item_details;
-use crate::incremental::ui::screen::Screen;
+use crate::ui::tooltip::{HideTooltip, ShowTooltip};
+use crate::ui::item::spawn_item_details;
+use crate::ui::screen::Screen;
 
 #[derive(Debug, Resource)]
 pub struct InventoryScreen(Entity);

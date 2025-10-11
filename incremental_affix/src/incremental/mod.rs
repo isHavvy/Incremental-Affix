@@ -7,7 +7,6 @@ use crate::incremental::item::item_database::ItemDatabase;
 pub mod action;
 pub mod item;
 pub mod stock;
-pub mod ui;
 
 pub struct IncrementalPlugin;
 

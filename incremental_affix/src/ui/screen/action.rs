@@ -1,10 +1,11 @@
 use bevy::color::palettes::css::GRAY;
 use bevy::ui::InteractionDisabled;
-use bevy::{prelude::*, ui_widgets::Activate};
+use bevy::ui_widgets::Activate;
+use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Button};
 
-use crate::incremental::action::{CanChop, CanMine, KnownActions, LearnAction};
-use crate::incremental::{action::{ActionProgress, Action, CurrentAction}, ui::screen::Screen};
+use crate::incremental::action::{Action, ActionProgress, CanChop, CanMine, CurrentAction, KnownActions, LearnAction};
+use crate::ui::screen::Screen;
 
 const BUTTON_ENABLED_COLOR: Color = Color::BLACK;
 const BUTTON_DISABLED_COLOR: Color = Color::Srgba(GRAY);

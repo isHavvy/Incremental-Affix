@@ -3,7 +3,7 @@ use bevy::ui_widgets::{observe, Activate, Button};
 
 use crate::incremental;
 use crate::incremental::action::KnownActions;
-use crate::incremental::ui::screen::action::ActionProgressBar;
+use crate::ui::screen::action::ActionProgressBar;
 
 pub mod action;
 pub mod craft;

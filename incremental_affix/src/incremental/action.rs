@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::platform::collections::HashSet;
 
 use crate::incremental::ExplorationProgress;
-use crate::incremental::ui::log::LogMessage;
+use crate::ui::log::LogMessage;
 use crate::incremental::stock::{StockKind, Stockyard};
 
 pub struct ActionPlugin;
