@@ -1,8 +1,8 @@
-use std::fmt::Display;
+use std::{borrow::Cow, fmt::Display};
 
-use bevy::ecs::component::Component;
+use bevy::{ecs::component::Component, platform::collections::HashMap};
 
-use crate::incremental::item::{item_slot::ItemSlotTag, modifier::{Affix, Implicit, Modifier, ModifierValue, Prefix, Suffix}};
+use crate::incremental::item::{base::{AffixiveItemBase, Base}, item_slot::ItemSlotTag, modifier::{Affix, Implicit, Modifier, ModifierValue, Prefix, Suffix}};
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Quality {
@@ -14,15 +14,6 @@ pub enum Quality {
     /// For example, an item with Quality::Qaulity(2) will have 2
     /// prefixes and 2 suffixes for a total of 4 affixes.
     Quality(i8),
-}
-
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
-pub struct AffixiveItemBaseIndex(pub usize);
-
-impl AffixiveItemBaseIndex {
-    pub fn inner(self) -> usize {
-        self.0
-    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -52,14 +43,6 @@ impl From<ItemSlotTag> for ItemTag {
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct AffixiveItemBase {
-    pub name: String,
-    pub level: u8,
-    pub tags: Vec<ItemTag>,
-    pub implicits: Vec<ImplicitIndex>,
-}
-
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum PushAffixError {
     AffixiveItemIsFixed,
@@ -68,7 +51,9 @@ pub(crate) enum PushAffixError {
 
 #[derive(Debug, Component)]
 pub(crate) struct AffixiveItem {
-    base_ix: AffixiveItemBaseIndex,
+    #[expect(unused)]
+    base: Base,
+    name: Cow<'static, str>,
     implicits: Vec<Implicit>,
     prefixes: Vec<Prefix>,
     suffixes: Vec<Suffix>,
@@ -77,25 +62,32 @@ pub(crate) struct AffixiveItem {
 }
 
 impl AffixiveItem {
-    pub(crate) fn new(bases: &[AffixiveItemBase], implicits: &[Implicit], base_ix: AffixiveItemBaseIndex, quality: Quality) -> Self {
-        let base = &bases[base_ix.0];
-        let mut implicits: Vec<Implicit> = base.implicits.iter().map(|ix| implicits[ix.0].clone()).collect();
+    pub(crate) fn new(bases: &HashMap<Base, AffixiveItemBase>, implicits_db: &[Implicit], base: Base, quality: Quality) -> Self {
+        let item_base = &bases[&base];
+
+        let mut implicits: Vec<Implicit>= item_base.implicits
+            .iter()
+            .map(|ix| &implicits_db[ix.0])
+            .cloned()
+            .collect();
+
         for implicit in &mut implicits {
             implicit.randomize_actual();
         }
 
         Self {
-            base_ix,
+            base,
+            name: item_base.name.clone(),
             implicits,
             prefixes: vec![],
             suffixes: vec![],
             quality,
-            tags: base.tags.clone(),
+            tags: item_base.tags.clone(),
         }
     }
 
-    pub(crate) fn name<'bases>(&self, bases: &'bases [AffixiveItemBase]) -> &'bases str {
-        &bases[self.base_ix.0].name
+    pub(crate) fn name(&self) -> &str {
+        &self.name
     }
 
     pub(crate) fn implicits(&self) -> impl Iterator<Item=&Affix> {
@@ -103,10 +95,10 @@ impl AffixiveItem {
     }
 
     #[allow(unused, reason = "Debug function")]
-    pub(crate) fn display(&self, bases: &[AffixiveItemBase]) -> String {
+    pub(crate) fn display(&self, bases: &HashMap<Base, AffixiveItemBase>) -> String {
         let mut output = String::new();
 
-        let name: &str = &bases[self.base_ix.0].name;
+        let name: &str = &self.name;
 
         match self.quality {
             Quality::FixedArtifact => {
@@ -153,13 +145,6 @@ impl AffixiveItem {
         }
 
         output
-    }
-
-    #[expect(unused)]
-    pub fn level(&self, bases: &[AffixiveItemBase]) -> u8 {
-        let base = &bases[self.base_ix.inner()];
-
-        base.level
     }
 
     /// Attempt to attach a prefix to this item.

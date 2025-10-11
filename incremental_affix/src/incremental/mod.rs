@@ -6,6 +6,8 @@ use std::{collections::HashMap, fmt::Write, ops::{AddAssign, Deref, DerefMut, In
 
 use bevy::prelude::*;
 
+use crate::incremental::item::item_database::ItemDatabase;
+
 pub mod action;
 pub mod item;
 pub mod ui;
@@ -17,7 +19,7 @@ impl Plugin for IncrementalPlugin {
         app
         .init_resource::<ExplorationProgress>()
         .init_resource::<Stockyard>()
-        .init_resource::<item::ItemDatabase>()
+        .init_resource::<ItemDatabase>()
         .init_resource::<item::equipment::Slots>()
         .insert_resource(TickTimer(Timer::from_seconds(1.0, TimerMode::Repeating)))
         .add_systems(FixedUpdate, (tick_stockyard_system,))
@@ -88,6 +90,18 @@ impl SubAssign<i64> for Stock {
     fn sub_assign(&mut self, neg_change: i64) {
         self.has_changed = true;
         self.current = i64::clamp(self.current - neg_change, 0, self.maximum.unwrap_or(i64::MAX));
+    }
+}
+
+impl PartialEq<i32> for Stock {
+    fn eq(&self, value: &i32) -> bool {
+        self.current.eq(&(*value as i64))
+    }
+}
+
+impl PartialOrd<i32> for Stock {
+    fn partial_cmp(&self, value: &i32) -> Option<std::cmp::Ordering> {
+        self.current.partial_cmp(&(*value as i64))
     }
 }
 

@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 
-use crate::incremental::item::{affixive_item::AffixiveItem, ItemDatabase};
+use crate::incremental::item::affixive_item::AffixiveItem;
 
 pub fn spawn_item_details(
     mut commands: Commands,
+
     item: &AffixiveItem,
-    db: &ItemDatabase
 ) -> Entity {
     let item_box = commands.spawn((
         Node {
@@ -31,7 +31,7 @@ pub fn spawn_item_details(
         BorderColor::all(Color::BLACK),
 
         children![(
-            Text::new(db.item_name(&item)),
+            Text::new(item.name().to_string()),
             TextFont { font_size: 16.0, ..default() }
         )],
 

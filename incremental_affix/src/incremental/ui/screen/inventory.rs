@@ -2,11 +2,12 @@ use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Activate, Button};
 
 use crate::incremental::action::{CanChop, CanMine};
+use crate::incremental::item::item_database::ItemDatabase;
 use crate::incremental::item::item_slot::ItemSlot;
-use crate::incremental::item::modifier::Modifiers;
+use crate::incremental::item::modifier::ModifierKind;
 use crate::incremental::ui::item::spawn_item_details;
 use crate::incremental::ui::tooltip::{HideTooltip, ShowTooltip};
-use crate::incremental::{item::{affixive_item::{AffixiveItem, ItemTag}, item_slot::ItemSlotTag, ItemDatabase}, ui::screen::Screen};
+use crate::incremental::{item::{affixive_item::{AffixiveItem, ItemTag}, item_slot::ItemSlotTag}, ui::screen::Screen};
 
 #[derive(Debug, Resource)]
 pub struct InventoryScreen(Entity);
@@ -142,7 +143,6 @@ pub fn on_activate_button_equip(
     activate: On<Activate>,
     mut commands: Commands,
 
-    item_database: Res<ItemDatabase>,
     active_slot: Res<ActiveSlot>,
     inventory_screen: Res<InventoryScreen>,
     item_db: Res<ItemDatabase>,
@@ -166,7 +166,7 @@ pub fn on_activate_button_equip(
 
     let item_tag = ItemTag::from(item_slot.tag);
 
-    if !item_database.item_has_tag(item, item_tag) {
+    if !item_db.item_has_tag(item, item_tag) {
         return;
     }
 
@@ -175,8 +175,8 @@ pub fn on_activate_button_equip(
     **can_mine = false;
     for (modifier, _value) in item.modifiers() {
         match modifier.kind {
-            Modifiers::CanChopWood => { **can_chop = true; },
-            Modifiers::CanMineStone => { **can_mine = true; },
+            ModifierKind::CanChopWood => { **can_chop = true; },
+            ModifierKind::CanMineStone => { **can_mine = true; },
             _ => { /* don't care */ }
         }
     }
@@ -187,7 +187,7 @@ pub fn on_activate_button_equip(
         let previous_item = item_query.get(previous_item_entity)
         .expect("Item entity in an item slot must have an item entity.");
 
-        let name = item_db.item_name(previous_item);
+        let name = previous_item.name().to_string();
 
         spawn_inventory_item(commands.reborrow(), &*inventory_screen, previous_item_entity, name.to_string());
     }
@@ -198,13 +198,12 @@ fn on_inventory_hover(
     event: On<Pointer<Over>>,
     mut commands: Commands,
 
-    db: Res<ItemDatabase>,
     corresponding_item_query: Query<&CorrespondingItem>,
     item_query: Query<&AffixiveItem>,
 ) {
     let item_entity = corresponding_item_query.get(event.entity).expect("Corresponding item must be on this entity.").0;
     let item = item_query.get(item_entity).expect("Item entity must have item component.");
-    let content = spawn_item_details(commands.reborrow(), item, &db);
+    let content = spawn_item_details(commands.reborrow(), item);
     commands.trigger(ShowTooltip { content });
 }
 
@@ -212,14 +211,13 @@ fn on_slot_hover(
     event: On<Pointer<Over>>,
     mut commands: Commands,
 
-    db: Res<ItemDatabase>,
     item_slot: Query<&ItemSlot>,
     item_query: Query<&AffixiveItem>,
 ) {
     let item_slot = item_slot.get(event.entity).expect("Item slot node must have an item slot component.");
     let Some(item_entity) = item_slot.item else { return /* if no item, no tooltip to show */; };
     let item = item_query.get(item_entity).expect("Item entity must have item component.");
-    let content = spawn_item_details(commands.reborrow(), item, &db);
+    let content = spawn_item_details(commands.reborrow(), item);
     commands.trigger(ShowTooltip { content });
 }
 

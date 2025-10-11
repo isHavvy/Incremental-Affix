@@ -4,11 +4,12 @@ use bevy::picking::hover::Hovered;
 use bevy::{prelude::*};
 use bevy::ui_widgets::{observe, Activate, Button};
 
-use crate::incremental::item::bases::Base;
+use crate::incremental::item::base::Base;
 use crate::incremental::ui::item::spawn_item_details;
+use crate::incremental::ui::log::LogMessage;
 use crate::incremental::ui::screen::inventory::spawn_inventory_item;
 use crate::incremental::ui::tooltip;
-use crate::incremental::{item::ItemDatabase, StockKind, Stockyard};
+use crate::incremental::{item::item_database::ItemDatabase, StockKind, Stockyard};
 use super::Screen;
 
 pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {
@@ -75,8 +76,12 @@ pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {
 pub fn handle_craft_button_click(
     activate: On<Activate>,
     mut commands: Commands,
+
     item_db: Res<ItemDatabase>,
     mut stockyard: ResMut<Stockyard>,
+
+    mut messages: MessageWriter<LogMessage>,
+
     base_query: Query<&Base>,
     inventory_screen: Res<super::inventory::InventoryScreen>,
 ) {
@@ -84,29 +89,34 @@ pub fn handle_craft_button_click(
 
     match base {
         Base::MakeshiftTools => {
+            if stockyard[StockKind::BranchesAndPebbles].current == 0 {
+                messages.write(LogMessage("Unable to craft. Missing branches and pebbles.".into()));
+                return;
+            }
             stockyard[StockKind::BranchesAndPebbles] -= 1;
-
-            let item = item_db.create_basic(*base);
-            let name = item_db.item_name(&item).to_string();
-
-            let item_entity = commands.spawn((
-                item,
-            )).id();
-
-            spawn_inventory_item(commands.reborrow(), &*inventory_screen, item_entity, name);
         },
 
-        Base::SecondaryTools => {
-            let item = item_db.create_basic(*base);
-            let name = item_db.item_name(&item).to_string();
+        Base::SecondaryTools => {},
 
-            let item_entity = commands.spawn((
-                item,
-            )).id();
+        Base::StoneTools => {
+            if stockyard[StockKind::Stone] < 500 || stockyard[StockKind::Wood] < 500 {
+                messages.write(LogMessage("Unable to craft stone tools. Need 5 stone and 5 wood.".into()));
+                return;
+            }
 
-            spawn_inventory_item(commands.reborrow(), &*inventory_screen, item_entity, name);
+            stockyard[StockKind::Stone] -= 500;
+            stockyard[StockKind::Wood] -= 500;
         }
     }
+
+    let item = item_db.create_basic(*base);
+    let name = item.name().to_string();
+
+    let item_entity = commands.spawn((
+        item,
+    )).id();
+
+    spawn_inventory_item(commands.reborrow(), &*inventory_screen, item_entity, name);
 }
 
 fn handle_craft_button_hover(
@@ -117,7 +127,7 @@ fn handle_craft_button_hover(
     base_query: Query<&Base>,
 ) {
     let base = base_query.get(event.entity).expect("This handler can only be on an entity with an item base.").clone();
-    let tooltip_content = spawn_item_details(commands.reborrow(), &db.create_basic(base), &db);
+    let tooltip_content = spawn_item_details(commands.reborrow(), &db.create_basic(base));
     commands.trigger(tooltip::ShowTooltip { content: tooltip_content });
 }
 

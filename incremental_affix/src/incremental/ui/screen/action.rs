@@ -1,3 +1,4 @@
+use bevy::ui::InteractionDisabled;
 use bevy::{prelude::*, ui_widgets::Activate};
 use bevy::ui_widgets::{observe, Button};
 
@@ -91,6 +92,7 @@ fn spawn_action_button(
 
         children![(
             Button,
+            InteractionDisabled,
             observe(on_press_button_action),
             action,
             Text::new(action.to_string()),
