@@ -15,13 +15,14 @@ fn main() {
     App::new()
     .add_plugins((
         DefaultPlugins,
+        bevy::ui_widgets::ButtonPlugin,
 
         IncrementalPlugin,
 
         ui::log::GameLogPlugin,
-        incremental::action::ActionPlugin,
         ui::tooltip::TooltipPlugin,
         ui::UiPlugin,
+
         bevy::dev_tools::fps_overlay::FpsOverlayPlugin {
             config: FpsOverlayConfig {
                 enabled: false,
@@ -33,7 +34,6 @@ fn main() {
                 ..default()
             }
         },
-        bevy::ui_widgets::ButtonPlugin,
     ))
     .run();
 }

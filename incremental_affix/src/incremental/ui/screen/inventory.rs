@@ -1,13 +1,13 @@
 use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Activate, Button};
 
-use crate::incremental::action::{CanChop, CanMine};
+use crate::incremental::item::equipment::Equipped;
 use crate::incremental::item::item_database::ItemDatabase;
-use crate::incremental::item::item_slot::ItemSlot;
-use crate::incremental::item::modifier::ModifierKind;
-use crate::incremental::ui::item::spawn_item_details;
+use crate::incremental::item::{item_slot::{ItemSlot, ItemSlotTag}, CraftEvent};
+use crate::incremental::item::{affixive_item::{AffixiveItem, ItemTag}};
 use crate::incremental::ui::tooltip::{HideTooltip, ShowTooltip};
-use crate::incremental::{item::{affixive_item::{AffixiveItem, ItemTag}, item_slot::ItemSlotTag}, ui::screen::Screen};
+use crate::incremental::ui::item::spawn_item_details;
+use crate::incremental::ui::screen::Screen;
 
 #[derive(Debug, Resource)]
 pub struct InventoryScreen(Entity);
@@ -93,6 +93,18 @@ fn spawn_slot(mut commands: Commands, parent: Entity, slot_tag: ItemSlotTag) -> 
     return container;
 }
 
+pub fn on_item_craft(
+    event: On<CraftEvent>,
+    mut commands: Commands,
+
+    inventory_screen: Res<InventoryScreen>,
+
+    item_query: Query<&AffixiveItem>,
+) {
+    let item = item_query.get(event.crafted_item).unwrap();
+    spawn_inventory_item(commands.reborrow(), &*inventory_screen, event.crafted_item, item.name().to_string());
+}
+
 pub fn spawn_inventory_item(
     mut commands: Commands,
     inventory_screen: &InventoryScreen,
@@ -147,9 +159,6 @@ pub fn on_activate_button_equip(
     inventory_screen: Res<InventoryScreen>,
     item_db: Res<ItemDatabase>,
 
-    mut can_chop: ResMut<CanChop>,
-    mut can_mine: ResMut<CanMine>,
-
     parent_query: Query<&ChildOf>,
     corresponding_item_query: Query<&CorrespondingItem>,
     item_query: Query<&AffixiveItem>,
@@ -170,17 +179,6 @@ pub fn on_activate_button_equip(
         return;
     }
 
-    // TODO(Havvy): Not hardcoded. If the action is active, stop if the tool can't continue.
-    **can_chop = false;
-    **can_mine = false;
-    for (modifier, _value) in item.modifiers() {
-        match modifier.kind {
-            ModifierKind::CanChopWood => { **can_chop = true; },
-            ModifierKind::CanMineStone => { **can_mine = true; },
-            _ => { /* don't care */ }
-        }
-    }
-
     let previous_item = std::mem::replace(&mut item_slot.item, Some(corresponding_item));
 
     if let Some(previous_item_entity) = previous_item {
@@ -192,6 +190,8 @@ pub fn on_activate_button_equip(
         spawn_inventory_item(commands.reborrow(), &*inventory_screen, previous_item_entity, name.to_string());
     }
     commands.entity(item_node).despawn();
+
+    commands.trigger(Equipped { item: corresponding_item });
 }
 
 fn on_inventory_hover(

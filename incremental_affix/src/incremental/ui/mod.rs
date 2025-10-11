@@ -13,13 +13,17 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app
-        .init_resource::<ActionProgressBar>()
+
         .add_systems(Startup, setup)
         .add_systems(Update, (
             stocks::update_resources_sidebar,
-            screen::action::update_action_progress_bar
         ))
-        .add_observer(screen::action::on_learn_action)
+
+        .add_plugins((
+            screen::action::ActionScreenPlugin,
+        ))
+
+        .add_observer(screen::inventory::on_item_craft)
         ;
     }
 }

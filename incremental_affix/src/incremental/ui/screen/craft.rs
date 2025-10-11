@@ -1,15 +1,12 @@
 //! The crafting screen.
 
 use bevy::picking::hover::Hovered;
-use bevy::{prelude::*};
+use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Activate, Button};
 
-use crate::incremental::item::base::Base;
-use crate::incremental::ui::item::spawn_item_details;
-use crate::incremental::ui::log::LogMessage;
-use crate::incremental::ui::screen::inventory::spawn_inventory_item;
-use crate::incremental::ui::tooltip;
-use crate::incremental::{item::item_database::ItemDatabase, StockKind, Stockyard};
+use crate::incremental::item::{base::Base, item_database::ItemDatabase, CraftEvent};
+use crate::incremental::stock::{StockKind, Stockyard};
+use crate::incremental::ui::{item::spawn_item_details, log::LogMessage, tooltip};
 use super::Screen;
 
 pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {
@@ -42,7 +39,7 @@ pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {
         ChildOf(screen)
     ));
 
-    for base in const { [Base::MakeshiftTools, Base::SecondaryTools] }.into_iter() {
+    for base in const { [Base::MakeshiftTools, Base::SecondaryTools, Base::StoneTools] }.into_iter() {
         commands.spawn((
             Node {
                 width: px(200),
@@ -64,8 +61,6 @@ pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {
             children![(
                 Text::new(base.to_string()),
                 TextColor(Color::BLACK),
-
-                
             )],
 
             ChildOf(screen),
@@ -73,7 +68,7 @@ pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {
     };
 }
 
-pub fn handle_craft_button_click(
+fn handle_craft_button_click(
     activate: On<Activate>,
     mut commands: Commands,
 
@@ -83,13 +78,12 @@ pub fn handle_craft_button_click(
     mut messages: MessageWriter<LogMessage>,
 
     base_query: Query<&Base>,
-    inventory_screen: Res<super::inventory::InventoryScreen>,
 ) {
     let base = base_query.get(activate.entity).expect("Craft button must have a base.");
 
     match base {
         Base::MakeshiftTools => {
-            if stockyard[StockKind::BranchesAndPebbles].current == 0 {
+            if stockyard[StockKind::BranchesAndPebbles] == 0 {
                 messages.write(LogMessage("Unable to craft. Missing branches and pebbles.".into()));
                 return;
             }
@@ -110,13 +104,12 @@ pub fn handle_craft_button_click(
     }
 
     let item = item_db.create_basic(*base);
-    let name = item.name().to_string();
 
     let item_entity = commands.spawn((
         item,
     )).id();
 
-    spawn_inventory_item(commands.reborrow(), &*inventory_screen, item_entity, name);
+    commands.trigger(CraftEvent { crafted_item: item_entity });
 }
 
 fn handle_craft_button_hover(

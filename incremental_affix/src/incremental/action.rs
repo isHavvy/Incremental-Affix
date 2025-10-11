@@ -1,6 +1,9 @@
-use bevy::{app::FixedMain, platform::collections::HashSet, prelude::*};
+use bevy::prelude::*;
+use bevy::platform::collections::HashSet;
 
-use crate::incremental::{ui::log::LogMessage, ExplorationProgress, StockKind, Stockyard};
+use crate::incremental::ExplorationProgress;
+use crate::incremental::ui::log::LogMessage;
+use crate::incremental::stock::{StockKind, Stockyard};
 
 pub struct ActionPlugin;
 
@@ -13,7 +16,7 @@ impl Plugin for ActionPlugin {
         .insert_resource(CanMine(false))
         .insert_resource(CanChop(false))
         .add_observer(on_learn_action)
-        .add_systems(FixedMain, (progress_system,))
+        .add_systems(FixedUpdate, (progress_system,))
         ;
     }
 }
@@ -28,10 +31,10 @@ pub struct CurrentAction(pub Option<Action>);
 pub struct KnownActions(HashSet<Action>);
 
 #[derive(Debug, Resource, Deref, DerefMut)]
-pub struct CanMine(bool);
+pub struct CanMine(pub bool);
 
 #[derive(Debug, Resource, Deref, DerefMut)]
-pub struct CanChop(bool);
+pub struct CanChop(pub bool);
 
 impl Default for KnownActions {
     fn default() -> Self {
@@ -118,6 +121,8 @@ fn progress_system(
                     1 => {
                         stockyard[StockKind::BranchesAndPebbles] += 1;
                         log_event_writer.write(LogMessage("While exploring, you find some twigs and rocks on the ground.".to_string()));
+                        log_event_writer.write(LogMessage("Furthermore, you notice there's a lot of trees and exposed stone.".to_string()));
+                        log_event_writer.write(LogMessage("You get the idea to craft some makeshift tools to gather some wood and stone.".to_string()));
 
                         commands.trigger(LearnAction { action: Action::GatherWood });
                         commands.trigger(LearnAction { action: Action::GatherStone });

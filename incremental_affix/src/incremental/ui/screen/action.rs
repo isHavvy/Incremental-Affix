@@ -1,9 +1,33 @@
+use bevy::color::palettes::css::GRAY;
 use bevy::ui::InteractionDisabled;
 use bevy::{prelude::*, ui_widgets::Activate};
 use bevy::ui_widgets::{observe, Button};
 
 use crate::incremental::action::{CanChop, CanMine, KnownActions, LearnAction};
 use crate::incremental::{action::{ActionProgress, Action, CurrentAction}, ui::screen::Screen};
+
+const BUTTON_ENABLED_COLOR: Color = Color::BLACK;
+const BUTTON_DISABLED_COLOR: Color = Color::Srgba(GRAY);
+
+pub struct ActionScreenPlugin;
+
+impl Plugin for ActionScreenPlugin {
+    fn build(&self, app: &mut App) {
+        app
+
+        .init_resource::<ActionProgressBar>()
+
+        .add_systems(Update, (
+            update_action_progress_bar,
+            on_changed_can_mine_system,
+            on_changed_can_chop_system
+        ))
+
+        .add_observer(on_learn_action)
+
+        ;
+    }
+}
 
 #[derive(Debug, Default, Resource)]
 pub struct ActionProgressBar(Option<Entity>);
@@ -75,9 +99,11 @@ fn spawn_action_button(
 
     container: Entity,
 ) {
-    commands.spawn((
+    let action_is_known = known_actions.contains(&action);
+
+    let mut button_container = commands.spawn((
         Node {
-            display: if known_actions.contains(&action) { Display::Flex } else { Display::None },
+            display: if action_is_known { Display::Flex } else { Display::None },
             border: UiRect::all(Val::Px(2.)),
             height: Val::Px(25.0),
             width: Val::Px(200.0),
@@ -90,24 +116,31 @@ fn spawn_action_button(
 
         action,
 
-        children![(
-            Button,
-            InteractionDisabled,
-            observe(on_press_button_action),
-            action,
-            Text::new(action.to_string()),
-            TextFont {
-                font_size: 20.0,
-                ..default()
-            },
-            TextColor(Color::BLACK),
-        )],
+        Button,
+        observe(on_press_button_action),
 
         ChildOf(container),
     ));
+
+    if !action_is_known {
+        button_container.insert(InteractionDisabled);
+    }
+
+    let button_container = button_container.id();
+
+    commands.spawn((
+        Text::new(action.to_string()),
+        TextFont {
+            font_size: 20.0,
+            ..default()
+        },
+        TextColor(if action_is_known { BUTTON_ENABLED_COLOR } else { BUTTON_DISABLED_COLOR }),
+
+        ChildOf(button_container),
+    ));
 }
 
-pub fn update_action_progress_bar(
+fn update_action_progress_bar(
     progress: Res<ActionProgress>,
     progress_bar: Res<ActionProgressBar>,
     mut progress_bar_style_query: Query<&mut Node>,
@@ -169,13 +202,72 @@ fn on_press_button_action(
     }
 }
 
-pub fn on_learn_action(
+fn on_learn_action(
     event: On<LearnAction>,
 
     action_container_query: Query<(&Action, &mut Node)>,
 ) {
+    eprintln!("Action learned.");
     action_container_query
     .into_iter()
     .find(|(action, _)| **action == event.action)
-    .map(|(_, mut node)| node.display = Display::Flex);
+    .map(|(_, mut node)| { node.display = Display::Flex; });
+}
+
+fn on_changed_can_mine_system(
+    mut commands: Commands,
+
+    can_mine: Res<CanMine>,
+
+    action_container_query: Query<(Entity, &Action, &Children), With<Node>>,
+    mut text_color_query: Query<&mut TextColor>,
+) {
+    if !can_mine.is_changed() {
+        return;
+    }
+
+    action_container_query.iter()
+    .find(|(_entity, action, _children,)| **action == Action::GatherStone)
+    .map(|(entity, _action, children)| {
+        if can_mine.0 {
+            commands.entity(entity)
+            .remove::<InteractionDisabled>();
+
+            text_color_query.get_mut(children[0]).unwrap().0 = BUTTON_ENABLED_COLOR;
+        } else {
+            commands.entity(entity)
+            .insert(InteractionDisabled);
+
+            text_color_query.get_mut(children[0]).unwrap().0 = BUTTON_DISABLED_COLOR;
+        }
+    });
+}
+
+fn on_changed_can_chop_system(
+    mut commands: Commands,
+
+    can_chop: Res<CanChop>,
+
+    action_container_query: Query<(Entity, &Action, &Children), With<Node>>,
+    mut text_color_query: Query<&mut TextColor>,
+) {
+    if !can_chop.is_changed() {
+        return;
+    }
+
+    action_container_query.iter()
+    .find(|(_entity, action, _children,)| **action == Action::GatherWood)
+    .map(|(entity, _action, children)| {
+        if can_chop.0 {
+            commands.entity(entity)
+            .remove::<InteractionDisabled>();
+
+            text_color_query.get_mut(children[0]).unwrap().0 = BUTTON_ENABLED_COLOR;
+        } else {
+            commands.entity(entity)
+            .insert(InteractionDisabled);
+
+            text_color_query.get_mut(children[0]).unwrap().0 = BUTTON_DISABLED_COLOR;
+        }
+    });
 }

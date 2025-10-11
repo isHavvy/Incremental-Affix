@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::incremental::{StockKind, Stockyard};
+use crate::incremental::stock::{StockKind, Stockyard};
 
 pub fn spawn_stocks_ui(commands: &mut Commands, sidebar: Entity, font: Handle<Font>) {
     commands.spawn((
@@ -65,10 +65,5 @@ pub fn update_resources_sidebar(
 
         text.clear();
         stock.push_str(&mut *text);
-        **text = format!("{}.{:0>2}", stock.current / 100, stock.current % 100).into();
-
-        if let Some(maximum) = stock.maximum {
-            text.push_str(&mut format!("/ {}", maximum / 100));
-        }
     }
 }
