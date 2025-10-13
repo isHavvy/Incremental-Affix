@@ -10,8 +10,8 @@ use crate::incremental::item::affixive_item::{ImplicitIndex, ItemTag};
 /// call `ItemDatabase.`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Component)]
 pub enum Base {
+    TestTools,
     MakeshiftTools,
-    SecondaryTools,
     StoneTools,
 }
 
@@ -19,7 +19,7 @@ impl ToString for Base {
     fn to_string(&self) -> String {
         match self {
             Base::MakeshiftTools => "Makeshift Tools".to_string(),
-            Base::SecondaryTools => "Secondary Tools".to_string(),
+            Base::TestTools => "Test Tools".to_string(),
             Base::StoneTools => "Stone Tools".to_string(),
         }
     }
@@ -45,10 +45,13 @@ pub fn initialize() -> HashMap<Base, AffixiveItemBase> {
         ],
     });
 
-    map.insert(Base::SecondaryTools, AffixiveItemBase {
-        name: "Secondary Tools".into(),
+    map.insert(Base::TestTools, AffixiveItemBase {
+        name: "Test Tools".into(),
         tags: vec![ItemTag::Tool],
-        implicits: vec![],
+        implicits: vec![
+            ImplicitIndex(0),
+            ImplicitIndex(1),
+        ],
     });
 
     map.insert(Base::StoneTools, AffixiveItemBase {

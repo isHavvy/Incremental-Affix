@@ -21,7 +21,7 @@ impl GameLogPlugin {
     }
 }
 
-#[derive(Resource)]
+#[derive(Debug, Resource)]
 struct LogUi(Entity);
 
 impl LogUi {
@@ -30,18 +30,16 @@ impl LogUi {
     }
 }
 
-// #[derive(Debug, Default, Resource)]
-// pub struct Log {
-//     logs: Vec<String>,
-// }
-
+// #[TODO(Havvy)]: Move this LogMessage to crate::incremental::log::LogMessage.
+//                 Currently this is the only reference to crate::ui
+//                 from crate::incremental, and that dependency needs
+//                 to be broken.
 #[derive(Debug, Message)]
 pub struct LogMessage(pub String);
 
 impl Plugin for GameLogPlugin {
     fn build(&self, app: &mut App) {
         app
-        //.init_resource::<Log>()
         .add_message::<LogMessage>()
         .add_systems(Update, (handle_log_event,));
     }

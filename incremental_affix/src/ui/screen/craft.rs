@@ -39,7 +39,7 @@ pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {
         ChildOf(screen)
     ));
 
-    for base in const { [Base::MakeshiftTools, Base::SecondaryTools, Base::StoneTools] }.into_iter() {
+    for base in const { [Base::MakeshiftTools, Base::TestTools, Base::StoneTools] }.into_iter() {
         commands.spawn((
             Node {
                 width: px(200),
@@ -90,7 +90,7 @@ fn handle_craft_button_click(
             stockyard[StockKind::BranchesAndPebbles] -= 1;
         },
 
-        Base::SecondaryTools => {},
+        Base::TestTools => {},
 
         Base::StoneTools => {
             if stockyard[StockKind::Stone] < 500 || stockyard[StockKind::Wood] < 500 {

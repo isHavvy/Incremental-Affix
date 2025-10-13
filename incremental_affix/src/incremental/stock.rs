@@ -74,6 +74,8 @@ impl Stock {
 
 impl AddAssign<i64> for Stock {
     fn add_assign(&mut self, change: i64) {
+        if change == 0 { return; }
+
         self.has_changed = true;
         self.current = i64::clamp(self.current + change, 0, self.maximum.unwrap_or(i64::MAX));
     }
@@ -81,6 +83,8 @@ impl AddAssign<i64> for Stock {
 
 impl SubAssign<i64> for Stock {
     fn sub_assign(&mut self, neg_change: i64) {
+        if neg_change == 0 { return; }
+
         self.has_changed = true;
         self.current = i64::clamp(self.current - neg_change, 0, self.maximum.unwrap_or(i64::MAX));
     }
@@ -145,11 +149,14 @@ impl IndexMut<StockKind> for Stockyard {
     }
 }
 
-fn tick_stockyard_system(time: Res<Time>, mut tick_timer: ResMut<TickTimer>, mut stockyard: ResMut<Stockyard>) {
+fn tick_stockyard_system(
+    time: Res<Time>,
+    mut tick_timer: ResMut<TickTimer>,
+    mut stockyard: ResMut<Stockyard>
+) {
     if tick_timer.tick(time.delta()).just_finished() {
         for (_key, stock) in &mut stockyard.0 {
-            debug!("{}", stock.change);
-            stock.current += stock.change;
+            *stock += stock.change;
         }
     }
 }

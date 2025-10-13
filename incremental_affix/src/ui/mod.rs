@@ -6,8 +6,7 @@ pub mod item;
 
 use bevy::prelude::*;
 
-use crate::incremental::{self, action::KnownActions};
-use screen::action::ActionProgressBar;
+use crate::incremental::action::{ActionProgress, KnownActions};
 
 pub struct UiPlugin;
 
@@ -33,8 +32,7 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     known_actions: Res<KnownActions>,
-    action_progress: Res<incremental::action::ActionProgress>,
-    action_progress_bar: ResMut<ActionProgressBar>,
+    action_progress: Res<ActionProgress>,
 ) {
     let font = asset_server.load::<Font>("fonts/FiraSans-Bold.ttf");
 
@@ -83,6 +81,6 @@ fn setup(
     )).id();
 
     stocks::spawn_stocks_ui(&mut commands, sidebar, font.clone());
-    screen::spawn_screens_ui(commands.reborrow(), right_of_sidebar, font.clone(), action_progress, known_actions, action_progress_bar);
+    screen::spawn_screens_ui(commands.reborrow(), right_of_sidebar, font.clone(), action_progress, known_actions);
     log::GameLogPlugin::setup_log_ui(commands, right_of_sidebar);
 }

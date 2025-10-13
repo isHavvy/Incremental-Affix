@@ -1,10 +1,12 @@
+use std::fmt::Write as _;
+
 use bevy::color::palettes::css::GRAY;
 use bevy::ui::InteractionDisabled;
 use bevy::ui_widgets::Activate;
 use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Button};
 
-use crate::incremental::action::{Action, ActionProgress, CanChop, CanMine, CurrentAction, KnownActions, LearnAction};
+use crate::incremental::action::{Action, ActionProgress, ChangeAction, ChopSpeed, CurrentAction, KnownActions, LearnAction, MineSpeed, NO_CURRENT_ACTION_DISPLAY};
 use crate::ui::screen::Screen;
 
 const BUTTON_ENABLED_COLOR: Color = Color::BLACK;
@@ -16,12 +18,11 @@ impl Plugin for ActionScreenPlugin {
     fn build(&self, app: &mut App) {
         app
 
-        .init_resource::<ActionProgressBar>()
-
         .add_systems(Update, (
             update_action_progress_bar,
             on_changed_can_mine_system,
-            on_changed_can_chop_system
+            on_changed_can_chop_system,
+            on_current_action_change_system,
         ))
 
         .add_observer(on_learn_action)
@@ -30,8 +31,11 @@ impl Plugin for ActionScreenPlugin {
     }
 }
 
-#[derive(Debug, Default, Resource)]
-pub struct ActionProgressBar(Option<Entity>);
+#[derive(Debug, Resource)]
+pub struct ActionProgressBar {
+    text: Entity,
+    bar: Entity
+}
 
 pub fn initialize_actions_screen(
     mut commands: Commands,
@@ -40,7 +44,6 @@ pub fn initialize_actions_screen(
 
     action_progress: Res<ActionProgress>,
     known_actions: Res<KnownActions>,
-    mut res_action_progress_bar: ResMut<ActionProgressBar>,
 ) {
     let screen = commands.spawn((
         Node {
@@ -74,17 +77,38 @@ pub fn initialize_actions_screen(
 
     let action_progress_bar = commands.spawn((
         Node {
+            display: Display::Block,
             height: Val::Percent(100.0),
             width: Val::Percent(action_progress.0),
             align_content: AlignContent::Center,
+            justify_content: JustifyContent::Center,
             ..default()
         },
         BackgroundColor(Color::srgb(1.0, 0.0, 0.0).into()),
-        Text::new(""),
         ChildOf(action_progress_bar_outer),
     )).id();
 
-    *res_action_progress_bar = ActionProgressBar(Some(action_progress_bar));
+    let action_bar_text = commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            width: px(400),
+            ..default()
+        },
+
+        Text::new(NO_CURRENT_ACTION_DISPLAY),
+        TextColor(Color::BLACK),
+        TextLayout {
+            justify: Justify::Center,
+            ..default()
+        },
+
+        ChildOf(action_progress_bar_outer),
+    )).id();
+
+    commands.insert_resource(ActionProgressBar {
+        text: action_bar_text,
+        bar: action_progress_bar,
+    });
 
     for action in Action::LIST.iter().copied() {
         spawn_action_button(action, commands.reborrow(), &known_actions, screen);
@@ -146,61 +170,34 @@ fn update_action_progress_bar(
     progress_bar: Res<ActionProgressBar>,
     mut progress_bar_style_query: Query<&mut Node>,
 ) {
-    if let Some(progress_bar) = progress_bar.0 {
-        let Ok(mut node) = progress_bar_style_query.get_mut(progress_bar) else { panic!("Progress bar entity must have a style.")};
+    let progress_bar = progress_bar.bar;
+    let mut node = progress_bar_style_query.get_mut(progress_bar).expect("Progress bar entity must have a style.");
+    node.width = Val::Px(400.0 * progress.0);
+}
 
-        node.width = Val::Px(400.0 * progress.0);
+fn on_current_action_change_system(
+    current_action: Res<CurrentAction>,
+    progress_bar: Res<ActionProgressBar>,
+
+    mut text_query: Query<&mut Text>
+) {
+
+    if !current_action.is_changed() {
+        return;
     }
+
+    let mut text = text_query.get_mut(progress_bar.text).expect("Progress bar text entity must have a Text component.");
+    text.clear();
+    let _ = write!(text.0, "{}", *current_action);
 }
 
 fn on_press_button_action(
     activate: On<Activate>,
+    mut commands: Commands,
     actions_query: Query<&Action>,
-    mut current_action: ResMut<CurrentAction>,
-    mut action_progress: ResMut<ActionProgress>,
-    can_mine: Res<CanMine>,
-    can_chop: Res<CanChop>,
 ) {
     let new_action = actions_query.get(activate.entity).expect("Action button must have an action entity.");
-
-    match new_action {
-        Action::Explore => {
-            // Don't reset progress if they re-clicked on the same action.
-            if current_action.0 == Some(Action::Explore) {
-                return;
-            }
-
-            current_action.0 = Some(Action::Explore);
-            action_progress.0 = 0.0
-        },
-        Action::GatherWood => {
-            // Don't reset progress if they re-clicked on the same action.
-            if current_action.0 == Some(Action::GatherWood) {
-                return;
-            }
-
-            if !**can_chop {
-                return;
-            }
-
-            current_action.0 = Some(Action::GatherWood);
-            action_progress.0 = 0.0;
-        },
-        Action::GatherStone => {
-            // Don't reset progress if they re-clicked on the same action.
-            if current_action.0 == Some(Action::GatherStone) {
-                return;
-            }
-
-            if !**can_mine {
-                return;
-            }
-
-            current_action.0 = Some(Action::GatherStone);
-            action_progress.0 = 0.0;
-        }
-        Action::CreateFollowers => todo!(),
-    }
+    commands.trigger(ChangeAction::new(*new_action));    
 }
 
 fn on_learn_action(
@@ -208,7 +205,6 @@ fn on_learn_action(
 
     action_container_query: Query<(&Action, &mut Node)>,
 ) {
-    eprintln!("Action learned.");
     action_container_query
     .into_iter()
     .find(|(action, _)| **action == event.action)
@@ -218,19 +214,19 @@ fn on_learn_action(
 fn on_changed_can_mine_system(
     mut commands: Commands,
 
-    can_mine: Res<CanMine>,
+    mine_speed: Res<MineSpeed>,
 
     action_container_query: Query<(Entity, &Action, &Children), With<Node>>,
     mut text_color_query: Query<&mut TextColor>,
 ) {
-    if !can_mine.is_changed() {
+    if !mine_speed.is_changed() {
         return;
     }
 
     action_container_query.iter()
     .find(|(_entity, action, _children,)| **action == Action::GatherStone)
     .map(|(entity, _action, children)| {
-        if can_mine.0 {
+        if mine_speed.can_mine() {
             commands.entity(entity)
             .remove::<InteractionDisabled>();
 
@@ -247,19 +243,19 @@ fn on_changed_can_mine_system(
 fn on_changed_can_chop_system(
     mut commands: Commands,
 
-    can_chop: Res<CanChop>,
+    chop_speed: Res<ChopSpeed>,
 
     action_container_query: Query<(Entity, &Action, &Children), With<Node>>,
     mut text_color_query: Query<&mut TextColor>,
 ) {
-    if !can_chop.is_changed() {
+    if !chop_speed.is_changed() {
         return;
     }
 
     action_container_query.iter()
     .find(|(_entity, action, _children,)| **action == Action::GatherWood)
     .map(|(entity, _action, children)| {
-        if can_chop.0 {
+        if chop_speed.can_chop() {
             commands.entity(entity)
             .remove::<InteractionDisabled>();
 

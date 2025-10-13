@@ -7,6 +7,7 @@ use crate::incremental::item::item_database::ItemDatabase;
 pub mod action;
 pub mod item;
 pub mod stock;
+pub mod critical;
 
 pub struct IncrementalPlugin;
 
@@ -15,7 +16,7 @@ impl Plugin for IncrementalPlugin {
         app
         .init_resource::<ExplorationProgress>()
         .init_resource::<ItemDatabase>()
-        .insert_resource(TickTimer(Timer::from_seconds(1.0, TimerMode::Repeating)))
+        .insert_resource(TickTimer(Timer::from_seconds(const { 1.0 / 20.0 }, TimerMode::Repeating)))
 
         .add_plugins((
             action::ActionPlugin,
