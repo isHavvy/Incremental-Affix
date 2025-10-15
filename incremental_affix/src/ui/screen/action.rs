@@ -6,7 +6,7 @@ use bevy::ui_widgets::Activate;
 use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Button};
 
-use crate::incremental::action::{Action, ActionCritical, ActionProgress, ChangeAction, ChopSpeed, CurrentAction, KnownActions, LearnAction, MineSpeed, NO_CURRENT_ACTION_DISPLAY};
+use crate::incremental::action::{Action, ActionAffinity, ActionProgress, ChangeAction, ChopSpeed, CurrentAction, KnownActions, LearnAction, MineSpeed, NO_CURRENT_ACTION_DISPLAY};
 use crate::ui::screen::Screen;
 
 const BUTTON_ENABLED_COLOR: Color = Color::BLACK;
@@ -21,7 +21,7 @@ impl Plugin for ActionScreenPlugin {
 
         .add_systems(Update, (
             update_action_bar_progress_bar,
-            update_action_bar_critical_bar,
+            update_action_bar_affinity_bar,
             on_changed_can_mine_system,
             on_changed_can_chop_system,
             on_current_action_change_system,
@@ -37,8 +37,8 @@ struct ActionProgressBar {
     /// The bar that fills up as action progress occurs.
     progress_bar: Entity,
 
-    /// The bar that fills down as critical time is used up.
-    critical_bar: Entity,
+    /// The bar that fills down as affinity time is used up.
+    affinity_bar: Entity,
 
     /// The text node inside the action bar.
     text: Entity,
@@ -104,7 +104,7 @@ fn spawn_action_bar(
         ChildOf(outer),
     )).id();
 
-    let critical_bar = commands.spawn((
+    let affinity_bar = commands.spawn((
         Node {
             position_type: PositionType::Absolute,
             width: ACTION_BAR_WIDTH,
@@ -139,7 +139,7 @@ fn spawn_action_bar(
     commands.insert_resource(ActionProgressBar {
         text,
         progress_bar,
-        critical_bar,
+        affinity_bar,
     });
 }
 
@@ -214,7 +214,7 @@ fn on_current_action_change_system(
         return;
     }
 
-    let mut node = node_query.get_mut(progress_bar.critical_bar).expect("Critical bar entity must have a Node component.");
+    let mut node = node_query.get_mut(progress_bar.affinity_bar).expect("Affinity bar entity must have a Node component.");
     node.width = percent(0);
 
     let mut text = text_query.get_mut(progress_bar.text).expect("Progress bar text entity must have a Text component.");
@@ -227,7 +227,7 @@ fn on_press_button_action(
     mut commands: Commands,
     actions_query: Query<&Action>,
 ) {
-    let new_action = actions_query.get(activate.entity).expect("Action button must have an action entity.");
+    let new_action = actions_query.get(activate.entity).expect("Action button must have an Action component.");
     commands.trigger(ChangeAction::new(*new_action));    
 }
 
@@ -300,14 +300,14 @@ fn on_changed_can_chop_system(
     });
 }
 
-fn update_action_bar_critical_bar(
+fn update_action_bar_affinity_bar(
     action_bar: Res<ActionProgressBar>,
-    action_critical: Res<ActionCritical>,
+    action_affinity: Res<ActionAffinity>,
 
     mut node_query: Query<&mut Node>,
 ) {
-    let percent = action_critical.time_left().as_secs_f32() / 5.0;
+    let percent = action_affinity.time_left().as_secs_f32() / 5.0;
 
-    let mut critical_bar_node = node_query.get_mut(action_bar.critical_bar).expect("Critical bar entity must have a Node component.");
-    critical_bar_node.width = ACTION_BAR_WIDTH * percent;
+    let mut affinity_bar_node = node_query.get_mut(action_bar.affinity_bar).expect("Affinity bar entity must have a Node component.");
+    affinity_bar_node.width = ACTION_BAR_WIDTH * percent;
 }

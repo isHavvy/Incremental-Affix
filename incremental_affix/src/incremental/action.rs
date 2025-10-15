@@ -4,7 +4,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::platform::collections::HashSet;
 
-use crate::incremental::critical::Critical;
+use crate::incremental::affinity::Affinity;
 use crate::incremental::ExplorationProgress;
 use crate::ui::log::LogMessage;
 use crate::incremental::stock::{StockKind, Stockyard};
@@ -21,11 +21,11 @@ impl Plugin for ActionPlugin {
         .init_resource::<KnownActions>()
         .insert_resource(MineSpeed(0.))
         .insert_resource(ChopSpeed(0.))
-        .insert_resource(ActionCritical { critical: Critical::new(), timer: None })
-        .init_resource::<CriticalTimer>()
+        .insert_resource(ActionAffinity { affinity: Affinity::new(), timer: None })
+        .init_resource::<AffinityTimer>()
         .add_observer(on_learn_action)
         .add_observer(on_change_action)
-        .add_systems(FixedUpdate, (progress_system, critical_check_system))
+        .add_systems(FixedUpdate, (progress_system, affinity_check_system))
         ;
     }
 }
@@ -214,9 +214,9 @@ fn progress_system(
 }
 
 #[derive(Debug, Resource, Deref, DerefMut)]
-struct CriticalTimer(Timer);
+struct AffinityTimer(Timer);
 
-impl CriticalTimer {
+impl AffinityTimer {
     fn new() -> Self {
         let mut timer = Timer::from_seconds(5.0, TimerMode::Repeating);
         timer.pause();
@@ -224,7 +224,7 @@ impl CriticalTimer {
     }
 }
 
-impl Default for CriticalTimer {
+impl Default for AffinityTimer {
     #[inline]
     fn default() -> Self {
         Self::new()
@@ -232,12 +232,12 @@ impl Default for CriticalTimer {
 }
 
 #[derive(Debug, Resource)]
-pub struct ActionCritical {
-    critical: Critical,
+pub struct ActionAffinity {
+    affinity: Affinity,
     timer: Option<Timer>,
 }
 
-impl ActionCritical {
+impl ActionAffinity {
     fn reset(&mut self) {
         self.timer = None;
     }
@@ -247,13 +247,13 @@ impl ActionCritical {
     }
 }
 
-fn critical_check_system(
+fn affinity_check_system(
     time: Res<Time>,
 
     current_action: ResMut<CurrentAction>,
 
-    mut critical_check_timer: ResMut<CriticalTimer>,
-    mut action_critical: ResMut<ActionCritical>,
+    mut affinity_check_timer: ResMut<AffinityTimer>,
+    mut action_affinity: ResMut<ActionAffinity>,
     mut stockyard: ResMut<Stockyard>,
 ) {
     let Some(current_action) = **current_action else { return; };
@@ -262,36 +262,36 @@ fn critical_check_system(
         return;
     }
 
-    if critical_check_timer.tick(time.delta()).just_finished() && action_critical.critical.check() {
+    if affinity_check_timer.tick(time.delta()).just_finished() && action_affinity.affinity.check() {
         match current_action {
             Action::GatherWood => {
                 stockyard[StockKind::Wood].set_player_action_has_affinity(true);
-                action_critical.timer = Some(Timer::new(action_critical.critical.time, TimerMode::Once));
+                action_affinity.timer = Some(Timer::new(action_affinity.affinity.time, TimerMode::Once));
             },
             Action::GatherStone => {
                 stockyard[StockKind::Stone].set_player_action_has_affinity(true);
-                action_critical.timer = Some(Timer::new(action_critical.critical.time, TimerMode::Once));
+                action_affinity.timer = Some(Timer::new(action_affinity.affinity.time, TimerMode::Once));
             },
 
             _ => {
-                panic!("Critical hit detected for an action without a critical.");
+                panic!("Affinity occurred detected for an action without affinity.");
             }
         }
     }
 
-    if let Some(timer) = &mut action_critical.timer && timer.tick(time.delta()).just_finished() {
+    if let Some(timer) = &mut action_affinity.timer && timer.tick(time.delta()).just_finished() {
         match current_action {
             Action::GatherWood => {
                 stockyard[StockKind::Wood].set_player_action_has_affinity(false);
-                action_critical.timer = None;
+                action_affinity.timer = None;
             },
             Action::GatherStone => {
                 stockyard[StockKind::Stone].set_player_action_has_affinity(false);
-                action_critical.timer = None;
+                action_affinity.timer = None;
             },
 
             _ => {
-                panic!("Critical hit timer timed out for an action without a critical.");
+                panic!("Affinity timer timed out for an action without affinity.");
             }
         }
     }
@@ -319,8 +319,8 @@ fn on_change_action(
 
     mut current_action: ResMut<CurrentAction>,
     mut action_progress: ResMut<ActionProgress>,
-    mut action_critical: ResMut<ActionCritical>,
-    mut critical_timer: ResMut<CriticalTimer>,
+    mut action_affinity: ResMut<ActionAffinity>,
+    mut affinity_timer: ResMut<AffinityTimer>,
 ) {
     // Changing to current action. Disregard.
     if Some(event.action) == current_action.0 {
@@ -328,8 +328,8 @@ fn on_change_action(
     }
 
     action_progress.reset();
-    action_critical.reset();
-    critical_timer.reset();
+    action_affinity.reset();
+    affinity_timer.reset();
     stockyard.reset_player_action_modifiers();
 
     current_action.set(event.action);
@@ -339,14 +339,14 @@ fn on_change_action(
         Action::GatherWood => {
             let stock = &mut stockyard[StockKind::Wood];
             stock.set_player_action_base_modifier(chop_speed.0);
-            stock.set_player_action_affinity_multiplier(Critical::new().multiplier);
-            critical_timer.unpause();
+            stock.set_player_action_affinity_multiplier(Affinity::new().multiplier);
+            affinity_timer.unpause();
         },
         Action::GatherStone => {
             let stock = &mut stockyard[StockKind::Stone];
             stock.set_player_action_base_modifier(mine_speed.0);
-            stock.set_player_action_affinity_multiplier(Critical::new().multiplier);
-            critical_timer.unpause();
+            stock.set_player_action_affinity_multiplier(Affinity::new().multiplier);
+            affinity_timer.unpause();
         },
         Action::CreateFollowers => {},
     }
