@@ -14,7 +14,6 @@ pub fn spawn_stocks_ui(commands: &mut Commands, sidebar: Entity, font: Handle<Fo
             font_size: 30.0,
             ..default()
         },
-        //TextColor(Color::srgb(0.9, 0.9, 0.9)),
         TextColor(Color::BLACK),
         ChildOf(sidebar),
     ));
@@ -35,35 +34,52 @@ fn spawn_stocks_stock_kind_line(mut commands: Commands, parent: Entity, stock_ki
 
     commands.spawn((
         Text::new(stock_kind.to_string()),
+
         TextLayout::new_with_justify(Justify::Left),
         TextColor(Color::BLACK),
+
         ChildOf(container)
     ));
 
     commands.spawn((
         Node {
+            flex_grow: 1.0,
             ..default()
         },
-        Text::new("0.0 / 100"),
+
+        Text::new(""),
         TextLayout::new_with_justify(Justify::Right),
-        TextColor(Color::BLACK),
+
         stock_kind,
+
+        children![
+            (TextSpan::new("(0.00)"), TextColor(Color::BLACK), TextFont { font_size: 14.0, ..default() },),
+            TextSpan::new(" "),
+            (TextSpan::new("0.00/100"), TextColor(Color::BLACK), TextFont { font_size: 14.0, ..default() },),
+        ],
+
         ChildOf(container)
     ));
 }
 
 pub fn update_resources_sidebar(
-    mut query: Query<(&mut Text, &StockKind)>,
+    mut query: Query<(&Children, &StockKind), With<Text>>,
+    mut span_query: Query<&mut TextSpan>,
     mut stockyard: ResMut<Stockyard>,
 ) {
-    for (mut text, stock_kind) in query.iter_mut() {
+    for (children, stock_kind) in query.iter_mut() {
         let stock = &mut stockyard[*stock_kind];
 
         if !stock.has_changed() {
             continue;
         }
 
-        text.clear();
-        stock.push_str(&mut *text);
+        let change_text_span = &mut **span_query.get_mut(children[2]).unwrap();
+        change_text_span.clear();
+        stock.push_str_current_and_maximum(change_text_span);
+
+        let value_text_span = &mut **span_query.get_mut(children[0]).unwrap();
+        value_text_span.clear();
+        stock.push_str_change_per_second(value_text_span);
     }
 }

@@ -268,11 +268,13 @@ fn critical_check_system(
     if critical_check_timer.tick(time.delta()).just_finished() && action_critical.critical.check() {
         match current_action {
             Action::GatherWood => {
-                stockyard[StockKind::Wood].change *= action_critical.critical.multiplier;
+                let change = stockyard[StockKind::Wood].get_change_per_tick() * action_critical.critical.multiplier;
+                stockyard[StockKind::Wood].set_change_per_tick(change);
                 action_critical.timer = Some(Timer::new(action_critical.critical.time, TimerMode::Once));
             },
             Action::GatherStone => {
-                stockyard[StockKind::Stone].change *= action_critical.critical.multiplier;
+                let change = stockyard[StockKind::Stone].get_change_per_tick() * action_critical.critical.multiplier;
+                stockyard[StockKind::Stone].set_change_per_tick(change);
                 action_critical.timer = Some(Timer::new(action_critical.critical.time, TimerMode::Once));
             },
 
@@ -285,11 +287,11 @@ fn critical_check_system(
     if let Some(timer) = &mut action_critical.timer && timer.tick(time.delta()).just_finished() {
         match current_action {
             Action::GatherWood => {
-                stockyard[StockKind::Wood].change = chop_speed.0;
+                stockyard[StockKind::Wood].set_change_per_tick(chop_speed.0);
                 action_critical.timer = None;
             },
             Action::GatherStone => {
-                stockyard[StockKind::Stone].change = mine_speed.0;
+                stockyard[StockKind::Stone].set_change_per_tick(mine_speed.0);
                 action_critical.timer = None;
             },
 
@@ -339,11 +341,11 @@ fn on_change_action(
         None | Some(Action::Explore) | Some(Action::CreateFollowers) => {},
 
         Some(Action::GatherWood) => {
-            stockyard[StockKind::Wood].change = 0.0;
+            stockyard[StockKind::Wood].set_change_per_tick(0.0);
         },
 
         Some(Action::GatherStone) => {
-            stockyard[StockKind::Stone].change = 0.0;
+            stockyard[StockKind::Stone].set_change_per_tick(0.0);
         },
     }
 
@@ -353,11 +355,11 @@ fn on_change_action(
     match event.action {
         Action::Explore => {},
         Action::GatherWood => {
-            stockyard[StockKind::Wood].change = (chop_speed.0 * 5.) as _;
+            stockyard[StockKind::Wood].set_change_per_tick(chop_speed.0);
             critical_timer.unpause();
         },
         Action::GatherStone => {
-            stockyard[StockKind::Stone].change = (mine_speed.0 * 5.) as _;
+            stockyard[StockKind::Stone].set_change_per_tick(mine_speed.0);
             critical_timer.unpause();
         },
         Action::CreateFollowers => {},

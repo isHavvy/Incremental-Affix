@@ -60,7 +60,7 @@ impl ToString for StockKind {
 pub struct Stock {
     current: i64,
     maximum: Option<i64>,
-    pub change: f64,
+    change: f64,
 
     /// Whether or not the stock has changed since UI has last looked at it.
     has_changed: bool,
@@ -104,12 +104,34 @@ impl PartialOrd<i32> for Stock {
 
 impl Stock {
     /// Push to a string the amount of stock is held and the maximum.
-    pub fn push_str(&self, string: &mut String) {
+    pub fn push_str_current_and_maximum(&self, string: &mut String) {
         write!(string, "{}.{:0>2}", self.current / 100, self.current % 100).expect("Writing to a string should work.");
 
         if let Some(maximum) = self.maximum {
-            write!(string, "/ {}", maximum / 100).expect("Writing to a string should work.");
+            write!(string, "/{}", maximum / 100).expect("Writing to a string should work.");
         }
+    }
+
+    /// Push to a string the change per second of the stock.
+    pub fn push_str_change_per_second(&self, string: &mut String) {
+        string.push('(');
+
+        if self.change > 0.0 {
+            string.push('+');
+        } else if self.change < 0.0 {
+            string.push('-');
+        }
+
+        let _ = write!(string, "{})", self.change / 5.0);
+    }
+
+    pub fn set_change_per_tick(&mut self, change: f64) {
+        self.change = change;
+        self.has_changed = true;
+    }
+
+    pub fn get_change_per_tick(&self) -> f64 {
+        self.change
     }
 
     /// Check if the stock has changed since last time calling this function.
@@ -145,7 +167,7 @@ impl Index<StockKind> for Stockyard {
 
 impl IndexMut<StockKind> for Stockyard {
     fn index_mut(&mut self, index: StockKind) -> &mut Self::Output {
-        self.0.get_mut(&index).expect("All keys for a Resources map must map to a value.")
+        self.0.get_mut(&index).expect("The Stockyard stock map should contain values for each kind of stock.")
     }
 }
 
