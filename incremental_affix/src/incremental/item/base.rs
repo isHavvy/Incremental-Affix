@@ -49,8 +49,8 @@ pub fn initialize() -> HashMap<Base, AffixiveItemBase> {
         name: "Test Tools".into(),
         tags: vec![ItemTag::Tool],
         implicits: vec![
-            ImplicitIndex(0),
-            ImplicitIndex(1),
+            ImplicitIndex(2),
+            ImplicitIndex(3),
         ],
     });
 
@@ -58,9 +58,8 @@ pub fn initialize() -> HashMap<Base, AffixiveItemBase> {
         name: "Stone Tools".into(),
         tags: vec![ItemTag::Tool],
         implicits: vec![
-            ImplicitIndex(0),
-            ImplicitIndex(1),
-
+            ImplicitIndex(2),
+            ImplicitIndex(3),
         ]
     });
 

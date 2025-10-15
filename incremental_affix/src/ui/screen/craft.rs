@@ -83,23 +83,23 @@ fn handle_craft_button_click(
 
     match base {
         Base::MakeshiftTools => {
-            if stockyard[StockKind::BranchesAndPebbles] == 0 {
+            if stockyard[StockKind::BranchesAndPebbles] == 0.0 {
                 messages.write(LogMessage("Unable to craft. Missing branches and pebbles.".into()));
                 return;
             }
-            stockyard[StockKind::BranchesAndPebbles] -= 1;
+            stockyard[StockKind::BranchesAndPebbles] -= 1.0;
         },
 
         Base::TestTools => {},
 
         Base::StoneTools => {
-            if stockyard[StockKind::Stone] < 500 || stockyard[StockKind::Wood] < 500 {
+            if stockyard[StockKind::Stone] < 5.0 || stockyard[StockKind::Wood] < 5.0 {
                 messages.write(LogMessage("Unable to craft stone tools. Need 5 stone and 5 wood.".into()));
                 return;
             }
 
-            stockyard[StockKind::Stone] -= 500;
-            stockyard[StockKind::Wood] -= 500;
+            stockyard[StockKind::Stone] -= 5.0;
+            stockyard[StockKind::Wood] -= 5.0;
         }
     }
 

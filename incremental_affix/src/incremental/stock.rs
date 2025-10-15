@@ -9,7 +9,7 @@ use std::ops::*;
 use bevy::prelude::*;
 use bevy::platform::collections::HashMap;
 
-use crate::incremental::TickTimer;
+use crate::incremental::{IncrementalPlugin, TickTimer};
 
 pub struct StockPlugin;
 
@@ -60,8 +60,8 @@ impl ToString for StockKind {
 #[derive(Debug)]
 pub struct Stock {
     /// Amount of stock held, in hundredths
-    current: i64,
-    maximum: Option<i64>,
+    current: f64,
+    maximum: Option<f64>,
 
     player_action_base_modifier: f64,
     player_action_affinity_multiplier: f64,
@@ -76,7 +76,7 @@ pub struct Stock {
 
 /// Constructors
 impl Stock {
-    fn new(current: i64, maximum: Option<i64>) -> Self {
+    fn new(current: f64, maximum: Option<f64>) -> Self {
         Self {
             current,
             maximum,
@@ -90,33 +90,33 @@ impl Stock {
     }
 }
 
-impl AddAssign<i64> for Stock {
-    fn add_assign(&mut self, change: i64) {
-        if change == 0 { return; }
+impl AddAssign<f64> for Stock {
+    fn add_assign(&mut self, change: f64) {
+        if change == 0.0 { return; }
 
         self.has_changed = true;
-        self.current = i64::clamp(self.current + change, 0, self.maximum.unwrap_or(i64::MAX));
+        self.current = f64::clamp(self.current + change, 0.0, self.maximum.unwrap_or(f64::MAX));
     }
 }
 
-impl SubAssign<i64> for Stock {
-    fn sub_assign(&mut self, neg_change: i64) {
-        if neg_change == 0 { return; }
+impl SubAssign<f64> for Stock {
+    fn sub_assign(&mut self, neg_change: f64) {
+        if neg_change == 0.0 { return; }
 
         self.has_changed = true;
-        self.current = i64::clamp(self.current - neg_change, 0, self.maximum.unwrap_or(i64::MAX));
+        self.current = f64::clamp(self.current - neg_change, 0.0, self.maximum.unwrap_or(f64::MAX));
     }
 }
 
-impl PartialEq<i32> for Stock {
-    fn eq(&self, value: &i32) -> bool {
-        self.current.eq(&(*value as i64))
+impl PartialEq<f64> for Stock {
+    fn eq(&self, value: &f64) -> bool {
+        self.current.eq(value)
     }
 }
 
-impl PartialOrd<i32> for Stock {
-    fn partial_cmp(&self, value: &i32) -> Option<std::cmp::Ordering> {
-        self.current.partial_cmp(&(*value as i64))
+impl PartialOrd<f64> for Stock {
+    fn partial_cmp(&self, value: &f64) -> Option<std::cmp::Ordering> {
+        self.current.partial_cmp(value)
     }
 }
 
@@ -124,16 +124,16 @@ impl PartialOrd<i32> for Stock {
 impl Stock {
     /// Push to a string the amount of stock is held and the maximum.
     pub fn push_str_current_and_maximum(&self, string: &mut String) {
-        write!(string, "{}.{:0>2}", self.current / 100, self.current % 100).expect("Writing to a string should work.");
+        let _ = write!(string, "{:0>2.2}", self.current);
 
         if let Some(maximum) = self.maximum {
-            write!(string, "/{}", maximum / 100).expect("Writing to a string should work.");
+            let _ = write!(string, "/{}", maximum);
         }
     }
 
     /// Push to a string the change per second of the stock.
     pub fn push_str_change_per_second(&self, string: &mut String) {
-        let change = self.get_change_per_tick();
+        let change = self.get_change_per_tick() * (IncrementalPlugin::TICKS_PER_SECOND as f64);
 
         string.push('(');
 
@@ -143,14 +143,14 @@ impl Stock {
             string.push('-');
         }
 
-        let _ = write!(string, "{})", change / 5.0);
+        let _ = write!(string, "{:.2})", change);
     }
 }
 
 /// Modifying formula values for automatic stock updating per tick.
 impl Stock {
     pub fn get_change_per_tick(&self) -> f64 {
-        let mut modifier = self.player_action_base_modifier;
+        let mut modifier = self.player_action_base_modifier / (IncrementalPlugin::TICKS_PER_SECOND as f64);
 
         if self.player_action_has_affinity {
             modifier *= self.player_action_affinity_multiplier;
@@ -207,11 +207,11 @@ impl Default for Stockyard {
     fn default() -> Self {
         let mut resources = HashMap::new();
 
-        resources.insert(StockKind::BranchesAndPebbles, Stock::new(0, None));
-        resources.insert(StockKind::Godpower, Stock::new(0, None));
-        resources.insert(StockKind::Followers, Stock::new(0, Some(10 * 100)));
-        resources.insert(StockKind::Wood, Stock::new(0, Some(100 * 100)));
-        resources.insert(StockKind::Stone, Stock::new(0, Some(100 * 100)));
+        resources.insert(StockKind::BranchesAndPebbles, Stock::new(0.0, None));
+        resources.insert(StockKind::Godpower, Stock::new(0.0, None));
+        resources.insert(StockKind::Followers, Stock::new(0.0, Some(10.0)));
+        resources.insert(StockKind::Wood, Stock::new(0.0, Some(100.0)));
+        resources.insert(StockKind::Stone, Stock::new(0.0, Some(100.0)));
 
         Self(resources)
     }

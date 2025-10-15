@@ -6,7 +6,8 @@ use bevy::ui_widgets::Activate;
 use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Button};
 
-use crate::incremental::action::{Action, ActionAffinity, ActionProgress, ChangeAction, ChopSpeed, CurrentAction, KnownActions, LearnAction, MineSpeed, NO_CURRENT_ACTION_DISPLAY};
+use crate::incremental::action::{Action, ActionAffinity, ActionProgress, ChangeAction, CurrentAction, KnownActions, LearnAction, NO_CURRENT_ACTION_DISPLAY};
+use crate::incremental::stats::PlayerActionsStats;
 use crate::ui::screen::Screen;
 
 const BUTTON_ENABLED_COLOR: Color = Color::BLACK;
@@ -22,8 +23,7 @@ impl Plugin for ActionScreenPlugin {
         .add_systems(Update, (
             update_action_bar_progress_bar,
             update_action_bar_affinity_bar,
-            on_changed_can_mine_system,
-            on_changed_can_chop_system,
+            on_changed_player_stats_system,
             on_current_action_change_system,
         ))
 
@@ -242,60 +242,42 @@ fn on_learn_action(
     .map(|(_, mut node)| { node.display = Display::Flex; });
 }
 
-fn on_changed_can_mine_system(
+// #[TODO(Havvy)]: Instead of checking every time the player stats change,
+//                 have the player stats fire events when the base goes to or from zero.
+fn on_changed_player_stats_system(
     mut commands: Commands,
 
-    mine_speed: Res<MineSpeed>,
+    player_actions_bonuses: Res<PlayerActionsStats>,
 
     action_container_query: Query<(Entity, &Action, &Children), With<Node>>,
     mut text_color_query: Query<&mut TextColor>,
 ) {
-    if !mine_speed.is_changed() {
+    if !player_actions_bonuses.is_changed() {
         return;
     }
 
     action_container_query.iter()
-    .find(|(_entity, action, _children,)| **action == Action::GatherStone)
-    .map(|(entity, _action, children)| {
-        if mine_speed.can_mine() {
+    .filter_map(|(entity, action, children)| {
+        player_actions_bonuses
+        .get_bonuses(*action)
+        .map(|bonuses| bonuses.has_base_gain())
+        .map(|enabled| (entity, children, enabled))
+    })
+    .for_each(|(entity, children, enabled)| {
+        let text_color = &mut text_color_query.get_mut(children[0])
+        .expect("Action button should have one child with a TextColor component.")
+        .0;
+
+        if enabled {
             commands.entity(entity)
             .remove::<InteractionDisabled>();
 
-            text_color_query.get_mut(children[0]).unwrap().0 = BUTTON_ENABLED_COLOR;
+            *text_color = BUTTON_ENABLED_COLOR;
         } else {
             commands.entity(entity)
             .insert(InteractionDisabled);
 
-            text_color_query.get_mut(children[0]).unwrap().0 = BUTTON_DISABLED_COLOR;
-        }
-    });
-}
-
-fn on_changed_can_chop_system(
-    mut commands: Commands,
-
-    chop_speed: Res<ChopSpeed>,
-
-    action_container_query: Query<(Entity, &Action, &Children), With<Node>>,
-    mut text_color_query: Query<&mut TextColor>,
-) {
-    if !chop_speed.is_changed() {
-        return;
-    }
-
-    action_container_query.iter()
-    .find(|(_entity, action, _children,)| **action == Action::GatherWood)
-    .map(|(entity, _action, children)| {
-        if chop_speed.can_chop() {
-            commands.entity(entity)
-            .remove::<InteractionDisabled>();
-
-            text_color_query.get_mut(children[0]).unwrap().0 = BUTTON_ENABLED_COLOR;
-        } else {
-            commands.entity(entity)
-            .insert(InteractionDisabled);
-
-            text_color_query.get_mut(children[0]).unwrap().0 = BUTTON_DISABLED_COLOR;
+            *text_color = BUTTON_DISABLED_COLOR;
         }
     });
 }

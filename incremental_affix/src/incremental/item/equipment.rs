@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 
-use crate::incremental::{action::{ChopSpeed, MineSpeed}, item::{affixive_item::AffixiveItem, modifier::ModifierKind}};
+use crate::incremental::item::{affixive_item::AffixiveItem, modifier::ModifierKind};
+use crate::incremental::stats::PlayerActionsStats;
 
 #[derive(Debug, EntityEvent)]
 pub struct Equipped {
@@ -11,20 +12,19 @@ pub struct Equipped {
 pub fn on_equip(
     equipped: On<Equipped>,
 
-    mut can_mine: ResMut<MineSpeed>,
-    mut can_chop: ResMut<ChopSpeed>,
+    mut player_actions_stats: ResMut<PlayerActionsStats>,
 
     item_query: Query<&AffixiveItem>,
 ) {
     let item = item_query.get(equipped.item).unwrap();
 
-    can_mine.set(0.);
-    can_chop.set(0.);
+    player_actions_stats.gather_wood.base_gain_per_second = 0.0;
+    player_actions_stats.gather_stone.base_gain_per_second = 0.0;
 
-    for (modifier, _) in item.modifiers() {
+    for (modifier, value) in item.modifiers() {
         match modifier.kind {
-            ModifierKind::CanChopWood => { can_chop.set(1.) },
-            ModifierKind::CanMineStone => { can_mine.set(1.); },
+            ModifierKind::WoodBase => { player_actions_stats.gather_wood.base_gain_per_second = value as f64 / 100. },
+            ModifierKind::StoneBase => { player_actions_stats.gather_stone.base_gain_per_second = value as f64 / 100. },
             _ => {}
         }
     }

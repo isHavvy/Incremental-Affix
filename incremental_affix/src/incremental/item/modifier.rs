@@ -126,26 +126,24 @@ impl DerefMut for Suffix {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[expect(unused)]
 pub enum ModifierKind {
-    // Need to change to WoodBase.
-    CanChopWood,
-    // Need to change to MineBase.
-    CanMineStone,
-
+    /// Base amount of wood added to the stockyard per second when the player uses Gather Wood in hundredths
+    WoodBase,
     /// Adds to this item's base wood gain by hundreds of the modifier's value
-    WoodBaseGain,
-    WoodMultiplier,
-    WoodAffinityChanceMultiplier,
-    WoodAffinityMultiplier,
-    WoodAffinityTimeMultiplier,
+    WoodBaseGain, // UNIMPLED
+    WoodMultiplier, // UNIMPLED
+    WoodAffinityChanceMultiplier, // UNIMPLED
+    WoodAffinityMultiplier, // UNIMPLED
+    WoodAffinityTimeMultiplier, // UNIMPLED
 
-    StoneBaseGain,
-    StoneMultiplier,
-    StoneAffinityChanceMultiplier,
-    StoneAffinityMultiplier,
-    StoneAffinityTimeMultiplier,
+    /// Base amount of stone added to the stockyard per second when the player uses Gather Stone in hundredths
+    StoneBase,
+    StoneBaseGain, // UNIMPLED
+    StoneMultiplier, // UNIMPLED
+    StoneAffinityChanceMultiplier, // UNIMPLED
+    StoneAffinityMultiplier, // UNIMPLED
+    StoneAffinityTimeMultiplier, // UNIMPLED
 
-    /// 
-    ToolAffinityChanceMultiplier,
+    ToolAffinityChanceMultiplier, // UNIMPLED
 }
 
 impl ModifierKind {
@@ -159,15 +157,14 @@ impl ModifierKind {
         }
 
         match *self {
-            ModifierKind::CanChopWood => "You can chop wood".to_string(),
-            ModifierKind::CanMineStone => "You can mine stone".to_string(),
-
+            ModifierKind::WoodBase => format!("Chopping wood gives {} wood per second", percent(actual)),
             ModifierKind::WoodBaseGain => format!("{}{} Wood chopped per second", sign(actual), percent(actual)),
             ModifierKind::WoodMultiplier => format!("{}{}% Wood chopped per second", sign(actual), actual),
             ModifierKind::WoodAffinityChanceMultiplier => format!("{}{}% Wood affinity chance", sign(actual), actual),
             ModifierKind::WoodAffinityMultiplier => format!("{}{}% Wood affinity gain", sign(actual), actual),
             ModifierKind::WoodAffinityTimeMultiplier => format!("{}{}% Wood affinity time", sign(actual), actual),
 
+            ModifierKind::StoneBase => format!("Mining stone gives {} stone per second", percent(actual)),
             ModifierKind::StoneBaseGain => format!("{}{} Stone mined per second", sign(actual), actual),
             ModifierKind::StoneMultiplier => format!("{}{}% Stone mined per second", sign(actual), actual),
             ModifierKind::StoneAffinityChanceMultiplier => format!("{}{} Stone affinity chance", sign(actual), actual),
@@ -181,8 +178,10 @@ impl ModifierKind {
 
 pub(crate) fn initialize_implicits() -> Vec<Implicit> {
     let mods = vec![
-        Affix::new("CanChopWood".to_string(), Modifier { kind: ModifierKind::CanChopWood, min: 1, max: 1 }),
-        Affix::new("CanMineStone".to_string(), Modifier { kind: ModifierKind::CanMineStone, min: 1, max: 1 })
+        Affix::new("Tier0ToolsGatherWoodBase".to_string(), Modifier { kind: ModifierKind::WoodBase, min: 50, max: 50 }),
+        Affix::new("Tier0ToolsGatherStoneBase".to_string(), Modifier { kind: ModifierKind::StoneBase, min: 50, max: 50 }),
+        Affix::new("Tier1ToolsGatherWoodBase".to_string(), Modifier { kind: ModifierKind::WoodBase, min: 80, max: 120 }),
+        Affix::new("Tier1ToolsGatherStoneBase".to_string(), Modifier { kind: ModifierKind::StoneBase, min: 80, max: 120 }),
     ];
 
     mods.into_iter().map(Implicit).collect()

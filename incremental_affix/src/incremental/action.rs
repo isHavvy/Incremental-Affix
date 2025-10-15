@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use bevy::platform::collections::HashSet;
 
 use crate::incremental::affinity::Affinity;
+use crate::incremental::stats::PlayerActionsStats;
 use crate::incremental::ExplorationProgress;
 use crate::ui::log::LogMessage;
 use crate::incremental::stock::{StockKind, Stockyard};
@@ -19,8 +20,6 @@ impl Plugin for ActionPlugin {
         .init_resource::<ActionProgress>()
         .init_resource::<CurrentAction>()
         .init_resource::<KnownActions>()
-        .insert_resource(MineSpeed(0.))
-        .insert_resource(ChopSpeed(0.))
         .insert_resource(ActionAffinity { affinity: Affinity::new(), timer: None })
         .init_resource::<AffinityTimer>()
         .add_observer(on_learn_action)
@@ -111,32 +110,6 @@ impl Display for CurrentAction {
 #[derive(Debug, Resource, Deref, DerefMut)]
 pub struct KnownActions(HashSet<Action>);
 
-#[derive(Debug, Resource, Deref, DerefMut)]
-pub struct MineSpeed(f64);
-
-impl MineSpeed {
-    pub fn can_mine(&self) -> bool {
-        self.0 != 0.0
-    }
-
-    pub fn set(&mut self, value: f64) {
-        self. 0 = value;
-    }
-}
-
-#[derive(Debug, Resource, Deref, DerefMut)]
-pub struct ChopSpeed(f64);
-
-impl ChopSpeed {
-    pub fn can_chop(&self) -> bool {
-        self.0 != 0.0
-    }
-
-    pub fn set(&mut self, value: f64) {
-        self. 0 = value;
-    }
-}
-
 impl Default for KnownActions {
     fn default() -> Self {
         let mut set = HashSet::new();
@@ -194,7 +167,7 @@ fn progress_system(
                 match exploration_progress.0 {
                     0 => {},
                     1 => {
-                        stockyard[StockKind::BranchesAndPebbles] += 1;
+                        stockyard[StockKind::BranchesAndPebbles] += 1.0;
                         log_event_writer.write(LogMessage("While exploring, you find some twigs and rocks on the ground.".to_string()));
                         log_event_writer.write(LogMessage("Furthermore, you notice there's a lot of trees and exposed stone.".to_string()));
                         log_event_writer.write(LogMessage("You get the idea to craft some makeshift tools to gather some wood and stone.".to_string()));
@@ -314,8 +287,7 @@ fn on_change_action(
     event: On<ChangeAction>,
 
     mut stockyard: ResMut<Stockyard>,
-    chop_speed: Res<ChopSpeed>,
-    mine_speed: Res<MineSpeed>,
+    player_action_bonuses: Res<PlayerActionsStats>,
 
     mut current_action: ResMut<CurrentAction>,
     mut action_progress: ResMut<ActionProgress>,
@@ -338,13 +310,13 @@ fn on_change_action(
         Action::Explore => {},
         Action::GatherWood => {
             let stock = &mut stockyard[StockKind::Wood];
-            stock.set_player_action_base_modifier(chop_speed.0);
+            stock.set_player_action_base_modifier(player_action_bonuses.gather_wood.base_gain_per_second);
             stock.set_player_action_affinity_multiplier(Affinity::new().multiplier);
             affinity_timer.unpause();
         },
         Action::GatherStone => {
             let stock = &mut stockyard[StockKind::Stone];
-            stock.set_player_action_base_modifier(mine_speed.0);
+            stock.set_player_action_base_modifier(player_action_bonuses.gather_stone.base_gain_per_second);
             stock.set_player_action_affinity_multiplier(Affinity::new().multiplier);
             affinity_timer.unpause();
         },

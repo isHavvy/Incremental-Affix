@@ -2,9 +2,11 @@ use std::ops::{Deref, DerefMut};
 
 use bevy::prelude::*;
 
-use crate::incremental::item::item_database::ItemDatabase;
+use item::item_database::ItemDatabase;
+use stats::PlayerActionsStats;
 
 pub mod action;
+pub mod stats;
 pub mod item;
 pub mod stock;
 pub mod affinity;
@@ -19,6 +21,7 @@ impl Plugin for IncrementalPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
         .init_resource::<ExplorationProgress>()
+        .init_resource::<PlayerActionsStats>()
         .init_resource::<ItemDatabase>()
         .insert_resource(TickTimer(Timer::from_seconds(const { 1.0 / Self::TICKS_PER_SECOND }, TimerMode::Repeating)))
 
