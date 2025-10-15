@@ -11,12 +11,16 @@ pub mod critical;
 
 pub struct IncrementalPlugin;
 
+impl IncrementalPlugin {
+    pub const TICKS_PER_SECOND: f32 = 20.0;
+}
+
 impl Plugin for IncrementalPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
         .init_resource::<ExplorationProgress>()
         .init_resource::<ItemDatabase>()
-        .insert_resource(TickTimer(Timer::from_seconds(const { 1.0 / 20.0 }, TimerMode::Repeating)))
+        .insert_resource(TickTimer(Timer::from_seconds(const { 1.0 / Self::TICKS_PER_SECOND }, TimerMode::Repeating)))
 
         .add_plugins((
             action::ActionPlugin,

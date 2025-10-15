@@ -252,9 +252,6 @@ fn critical_check_system(
 
     current_action: ResMut<CurrentAction>,
 
-    chop_speed: Res<ChopSpeed>,
-    mine_speed: Res<MineSpeed>,
-
     mut critical_check_timer: ResMut<CriticalTimer>,
     mut action_critical: ResMut<ActionCritical>,
     mut stockyard: ResMut<Stockyard>,
@@ -268,13 +265,11 @@ fn critical_check_system(
     if critical_check_timer.tick(time.delta()).just_finished() && action_critical.critical.check() {
         match current_action {
             Action::GatherWood => {
-                let change = stockyard[StockKind::Wood].get_change_per_tick() * action_critical.critical.multiplier;
-                stockyard[StockKind::Wood].set_change_per_tick(change);
+                stockyard[StockKind::Wood].set_player_action_has_affinity(true);
                 action_critical.timer = Some(Timer::new(action_critical.critical.time, TimerMode::Once));
             },
             Action::GatherStone => {
-                let change = stockyard[StockKind::Stone].get_change_per_tick() * action_critical.critical.multiplier;
-                stockyard[StockKind::Stone].set_change_per_tick(change);
+                stockyard[StockKind::Stone].set_player_action_has_affinity(true);
                 action_critical.timer = Some(Timer::new(action_critical.critical.time, TimerMode::Once));
             },
 
@@ -287,11 +282,11 @@ fn critical_check_system(
     if let Some(timer) = &mut action_critical.timer && timer.tick(time.delta()).just_finished() {
         match current_action {
             Action::GatherWood => {
-                stockyard[StockKind::Wood].set_change_per_tick(chop_speed.0);
+                stockyard[StockKind::Wood].set_player_action_has_affinity(false);
                 action_critical.timer = None;
             },
             Action::GatherStone => {
-                stockyard[StockKind::Stone].set_change_per_tick(mine_speed.0);
+                stockyard[StockKind::Stone].set_player_action_has_affinity(false);
                 action_critical.timer = None;
             },
 
@@ -335,31 +330,22 @@ fn on_change_action(
     action_progress.reset();
     action_critical.reset();
     critical_timer.reset();
-    
-
-    match current_action.0 {
-        None | Some(Action::Explore) | Some(Action::CreateFollowers) => {},
-
-        Some(Action::GatherWood) => {
-            stockyard[StockKind::Wood].set_change_per_tick(0.0);
-        },
-
-        Some(Action::GatherStone) => {
-            stockyard[StockKind::Stone].set_change_per_tick(0.0);
-        },
-    }
-
+    stockyard.reset_player_action_modifiers();
 
     current_action.set(event.action);
 
     match event.action {
         Action::Explore => {},
         Action::GatherWood => {
-            stockyard[StockKind::Wood].set_change_per_tick(chop_speed.0);
+            let stock = &mut stockyard[StockKind::Wood];
+            stock.set_player_action_base_modifier(chop_speed.0);
+            stock.set_player_action_affinity_multiplier(Critical::new().multiplier);
             critical_timer.unpause();
         },
         Action::GatherStone => {
-            stockyard[StockKind::Stone].set_change_per_tick(mine_speed.0);
+            let stock = &mut stockyard[StockKind::Stone];
+            stock.set_player_action_base_modifier(mine_speed.0);
+            stock.set_player_action_affinity_multiplier(Critical::new().multiplier);
             critical_timer.unpause();
         },
         Action::CreateFollowers => {},

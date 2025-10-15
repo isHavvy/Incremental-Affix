@@ -57,18 +57,36 @@ impl ToString for StockKind {
 }
 
 /// A numeric resource held by the player.
+#[derive(Debug)]
 pub struct Stock {
+    /// Amount of stock held, in hundredths
     current: i64,
     maximum: Option<i64>,
-    change: f64,
 
-    /// Whether or not the stock has changed since UI has last looked at it.
+    player_action_base_modifier: f64,
+    player_action_affinity_multiplier: f64,
+    player_action_has_affinity: bool,
+
+    /// Whether or not the stock has changed since `has_changed`
+    /// 
+    /// Both changes to the actual value and changes to the change per tick
+    /// will set this to true.
     has_changed: bool,
 }
 
+/// Constructors
 impl Stock {
     fn new(current: i64, maximum: Option<i64>) -> Self {
-        Self { current, maximum, change: 0.0, has_changed: true }
+        Self {
+            current,
+            maximum,
+
+            player_action_base_modifier: 0.0,
+            player_action_affinity_multiplier: 1.0,
+            player_action_has_affinity: false,
+
+            has_changed: true,
+        }
     }
 }
 
@@ -102,6 +120,7 @@ impl PartialOrd<i32> for Stock {
     }
 }
 
+/// Reading stock values to strings.
 impl Stock {
     /// Push to a string the amount of stock is held and the maximum.
     pub fn push_str_current_and_maximum(&self, string: &mut String) {
@@ -114,34 +133,75 @@ impl Stock {
 
     /// Push to a string the change per second of the stock.
     pub fn push_str_change_per_second(&self, string: &mut String) {
+        let change = self.get_change_per_tick();
+
         string.push('(');
 
-        if self.change > 0.0 {
+        if change > 0.0 {
             string.push('+');
-        } else if self.change < 0.0 {
+        } else if change < 0.0 {
             string.push('-');
         }
 
-        let _ = write!(string, "{})", self.change / 5.0);
+        let _ = write!(string, "{})", change / 5.0);
+    }
+}
+
+/// Modifying formula values for automatic stock updating per tick.
+impl Stock {
+    pub fn get_change_per_tick(&self) -> f64 {
+        let mut modifier = self.player_action_base_modifier;
+
+        if self.player_action_has_affinity {
+            modifier *= self.player_action_affinity_multiplier;
+        }
+
+        modifier
     }
 
-    pub fn set_change_per_tick(&mut self, change: f64) {
-        self.change = change;
+    pub fn set_player_action_base_modifier(&mut self, modifier_per_second: f64) {
+        self.player_action_base_modifier = modifier_per_second;
         self.has_changed = true;
     }
 
-    pub fn get_change_per_tick(&self) -> f64 {
-        self.change
+    /// Sets the multiplier to the player's action base modifier if the player's action is affine.
+    /// 
+    /// Multiplier is not modified. You probably don't want to pass a multiplier less than 1.0.
+    pub fn set_player_action_affinity_multiplier(&mut self, multiplier: f64) {
+        self.player_action_affinity_multiplier = multiplier;
+        self.has_changed = true;
     }
 
+    pub fn set_player_action_has_affinity(&mut self, has_affinity: bool) {
+        self.player_action_has_affinity = has_affinity;
+        self.has_changed = true;
+    }
+
+    pub fn reset_player_action_modifiers(&mut self) {
+        self.player_action_base_modifier = 0.0;
+        self.player_action_affinity_multiplier = 1.0;
+        self.player_action_has_affinity = false;
+    }
+}
+
+/// Change detection
+impl Stock {
     /// Check if the stock has changed since last time calling this function.
     pub fn has_changed(&mut self) -> bool {
         std::mem::replace(&mut self.has_changed, false)
     }
 }
 
-#[derive(bevy::prelude::Resource)]
+#[derive(Debug, Resource, Deref, DerefMut)]
 pub struct Stockyard(HashMap<StockKind, Stock>);
+
+impl Stockyard {
+    pub fn reset_player_action_modifiers(&mut self) {
+        for stock in self.values_mut() {
+            stock.reset_player_action_modifiers();
+        }
+    }
+}
 
 impl Default for Stockyard {
     fn default() -> Self {
@@ -177,8 +237,8 @@ fn tick_stockyard_system(
     mut stockyard: ResMut<Stockyard>
 ) {
     if tick_timer.tick(time.delta()).just_finished() {
-        for (_key, stock) in &mut stockyard.0 {
-            *stock += stock.change as i64;
+        for stock in &mut stockyard.values_mut() {
+            *stock += stock.get_change_per_tick() as _;
         }
     }
 }
