@@ -1,4 +1,5 @@
 mod incremental;
+mod stats_builder;
 mod ui;
 
 use bevy::dev_tools::fps_overlay::{FpsOverlayConfig, FpsOverlayPlugin, FrameTimeGraphConfig};

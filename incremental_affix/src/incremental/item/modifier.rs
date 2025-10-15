@@ -129,16 +129,16 @@ pub enum ModifierKind {
     /// Base amount of wood added to the stockyard per second when the player uses Gather Wood in hundredths
     WoodBase,
     /// Adds to this item's base wood gain by hundreds of the modifier's value
-    WoodBaseGain, // UNIMPLED
-    WoodMultiplier, // UNIMPLED
+    WoodBaseGain,
+    WoodMultiplier,
     WoodAffinityChanceMultiplier, // UNIMPLED
     WoodAffinityMultiplier, // UNIMPLED
     WoodAffinityTimeMultiplier, // UNIMPLED
 
     /// Base amount of stone added to the stockyard per second when the player uses Gather Stone in hundredths
     StoneBase,
-    StoneBaseGain, // UNIMPLED
-    StoneMultiplier, // UNIMPLED
+    StoneBaseGain,
+    StoneMultiplier,
     StoneAffinityChanceMultiplier, // UNIMPLED
     StoneAffinityMultiplier, // UNIMPLED
     StoneAffinityTimeMultiplier, // UNIMPLED
