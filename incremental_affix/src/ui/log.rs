@@ -38,6 +38,13 @@ impl LogUi {
 #[derive(Debug, Message)]
 pub struct LogMessage(pub String);
 
+impl LogMessage {
+    #[inline]
+    pub fn new(into_string: impl Into<String>) -> Self {
+        Self(into_string.into())
+    }
+}
+
 impl Plugin for GameLogPlugin {
     fn build(&self, app: &mut App) {
         app

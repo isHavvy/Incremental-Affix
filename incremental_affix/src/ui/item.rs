@@ -53,6 +53,62 @@ pub fn spawn_item_details(
         ));
     }
 
+    let mut prefixes = item.prefixes().peekable();
+
+    if prefixes.peek().is_some() {
+        let prefixes_node = commands.spawn((
+            Node {
+                border: px(1).all(),
+                ..default()
+            },
+
+            ChildOf(item_box),
+        )).id();
+
+        for prefix in prefixes {
+            commands.spawn((
+                Node {
+                    ..default()
+                },
+
+                children![(
+                    Text::new(format!("P {}", prefix.display())),
+                    TextFont { font_size: 14.0, ..default() }
+                )],
+
+                ChildOf(prefixes_node),
+            ));
+        }
+    }
+
+    let mut suffixes = item.suffixes().peekable();
+
+    if suffixes.peek().is_some() {
+        let suffixes_node = commands.spawn((
+            Node {
+                border: px(1).all(),
+                ..default()
+            },
+
+            ChildOf(item_box),
+        )).id();
+
+        for suffix in suffixes {
+            commands.spawn((
+                Node {
+                    ..default()
+                },
+
+                children![(
+                    Text::new(format!("S {}", suffix.display())),
+                    TextFont { font_size: 14.0, ..default() }
+                )],
+
+                ChildOf(suffixes_node),
+            ));
+        }
+    }
+
     for tag in item.tags.iter().copied() {
         commands.spawn((
             Node {

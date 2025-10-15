@@ -126,9 +126,12 @@ impl DerefMut for Suffix {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[expect(unused)]
 pub enum ModifierKind {
+    // Need to change to WoodBase.
     CanChopWood,
+    // Need to change to MineBase.
     CanMineStone,
 
+    /// Adds to this item's base wood gain by hundreds of the modifier's value
     WoodBaseGain,
     WoodMultiplier,
     WoodAffinityChanceMultiplier,
@@ -140,6 +143,9 @@ pub enum ModifierKind {
     StoneAffinityChanceMultiplier,
     StoneAffinityMultiplier,
     StoneAffinityTimeMultiplier,
+
+    /// 
+    ToolAffinityChanceMultiplier,
 }
 
 impl ModifierKind {
@@ -148,11 +154,15 @@ impl ModifierKind {
             if n > 0 { '+' } else { '-' }
         }
 
+        fn percent(n: i32) -> f32 {
+            n as f32 / 100.0
+        }
+
         match *self {
             ModifierKind::CanChopWood => "You can chop wood".to_string(),
             ModifierKind::CanMineStone => "You can mine stone".to_string(),
 
-            ModifierKind::WoodBaseGain => format!("{}{} Wood chopped per second", sign(actual), actual),
+            ModifierKind::WoodBaseGain => format!("{}{} Wood chopped per second", sign(actual), percent(actual)),
             ModifierKind::WoodMultiplier => format!("{}{}% Wood chopped per second", sign(actual), actual),
             ModifierKind::WoodAffinityChanceMultiplier => format!("{}{}% Wood affinity chance", sign(actual), actual),
             ModifierKind::WoodAffinityMultiplier => format!("{}{}% Wood affinity gain", sign(actual), actual),
@@ -163,6 +173,8 @@ impl ModifierKind {
             ModifierKind::StoneAffinityChanceMultiplier => format!("{}{} Stone affinity chance", sign(actual), actual),
             ModifierKind::StoneAffinityMultiplier => format!("{}{}% Stone affinity gain", sign(actual), actual),
             ModifierKind::StoneAffinityTimeMultiplier => format!("{}{}% Sone affinity time", sign(actual), actual),
+
+            ModifierKind::ToolAffinityChanceMultiplier => format!("{}{} Tool action affinity chance", sign(actual), percent(actual)),
         }
     }
 }
@@ -174,4 +186,20 @@ pub(crate) fn initialize_implicits() -> Vec<Implicit> {
     ];
 
     mods.into_iter().map(Implicit).collect()
+}
+
+pub(crate) fn initialize_prefixes() -> Vec<Prefix> {
+    let mods = vec![
+        Affix::new("Lumberjack's".to_string(), Modifier { kind: ModifierKind::WoodBaseGain, min: 10, max: 20 }),
+    ];
+
+    mods.into_iter().map(Prefix).collect()
+}
+
+pub(crate) fn initialize_suffixes() -> Vec<Suffix> {
+    let mods = vec![
+        Affix::new("ingenuity".to_string(), Modifier { kind: ModifierKind::ToolAffinityChanceMultiplier, min: 50, max: 100 }),
+    ];
+
+    mods.into_iter().map(Suffix).collect()
 }

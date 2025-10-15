@@ -21,7 +21,7 @@ impl bevy::prelude::Plugin for ItemPlugin {
 }
 
 #[derive(Debug, Event)]
-pub struct CraftEvent {
+pub struct Crafted {
     /// Entity that contains the crafted affixive item as a component.
     pub crafted_item: Entity,
 }

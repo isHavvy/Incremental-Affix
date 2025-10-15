@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Activate, Button};
 
+use crate::incremental::item::affixive_item::PushAffixError;
 use crate::incremental::item::equipment::Equipped;
 use crate::incremental::item::item_database::ItemDatabase;
-use crate::incremental::item::{item_slot::{ItemSlot, ItemSlotTag}, CraftEvent};
+use crate::incremental::item::{item_slot::{ItemSlot, ItemSlotTag}, Crafted};
 use crate::incremental::item::{affixive_item::{AffixiveItem, ItemTag}};
+use crate::ui::log::LogMessage;
 use crate::ui::tooltip::{HideTooltip, ShowTooltip};
 use crate::ui::item::spawn_item_details;
 use crate::ui::screen::Screen;
@@ -94,7 +96,7 @@ fn spawn_slot(mut commands: Commands, parent: Entity, slot_tag: ItemSlotTag) -> 
 }
 
 pub fn on_item_craft(
-    event: On<CraftEvent>,
+    event: On<Crafted>,
     mut commands: Commands,
 
     inventory_screen: Res<InventoryScreen>,
@@ -145,14 +147,34 @@ pub fn spawn_inventory_item(
     ));
 
     commands.spawn((
+        Node {
+            border: px(1).all(),
+            margin: px(4).right(),
+
+            ..default()
+        },
+        BorderColor::all(Color::BLACK),
+
+        Button,
+        observe(on_activate_button_roll),
+
+        children![(
+            Text::new("R"),
+            TextColor(Color::BLACK),
+        )],
+
+        ChildOf(line),
+    ));
+
+    commands.spawn((
         Text(item_name),
         TextColor(Color::BLACK),
         ChildOf(line)
     ));
 }
 
-pub fn on_activate_button_equip(
-    activate: On<Activate>,
+fn on_activate_button_equip(
+    event: On<Activate>,
     mut commands: Commands,
 
     active_slot: Res<ActiveSlot>,
@@ -164,7 +186,7 @@ pub fn on_activate_button_equip(
     item_query: Query<&AffixiveItem>,
     mut item_slot_query: Query<&mut ItemSlot>
 ) {
-    let item_node = parent_query.get(activate.entity).unwrap().parent();
+    let item_node = parent_query.get(event.entity).unwrap().parent();
     let corresponding_item = corresponding_item_query.get(item_node).unwrap().0;
 
     let item = item_query.get(corresponding_item)
@@ -194,6 +216,35 @@ pub fn on_activate_button_equip(
     commands.trigger(Equipped { item: corresponding_item });
 }
 
+fn on_activate_button_roll(
+    event: On<Activate>,
+
+    db: Res<ItemDatabase>,
+
+    mut log_writer: MessageWriter<LogMessage>,
+
+    parent_query: Query<&ChildOf>,
+    corresponding_item_query: Query<&CorrespondingItem>,
+    mut item_query: Query<&mut AffixiveItem>,
+) {
+    let item_node = parent_query.get(event.entity).unwrap().parent();
+    let corresponding_item = corresponding_item_query.get(item_node).unwrap().0;
+
+    let mut item = item_query.get_mut(corresponding_item)
+    .expect("Corresponding item entity must have an item component.");
+
+    item.increase_quality_to(1);
+    match db.try_push_random_prefix(&mut item) {
+        Ok(_) => {},
+        Err(PushAffixError::AffixiveItemIsFixed) => {
+            log_writer.write(LogMessage::new("You cannot modify the affixes of this."));
+        },
+        Err(PushAffixError::AffixiveItemQualityTooLow) => {
+            log_writer.write(LogMessage::new("Cannot add prefix. Item quality too low."));
+        },
+    }
+}
+
 fn on_inventory_hover(
     event: On<Pointer<Over>>,
     mut commands: Commands,
@@ -201,8 +252,12 @@ fn on_inventory_hover(
     corresponding_item_query: Query<&CorrespondingItem>,
     item_query: Query<&AffixiveItem>,
 ) {
-    let item_entity = corresponding_item_query.get(event.entity).expect("Corresponding item must be on this entity.").0;
-    let item = item_query.get(item_entity).expect("Item entity must have item component.");
+    let item_entity = corresponding_item_query.get(event.entity)
+    .expect("Corresponding item must be on this entity.").0;
+
+    let item = item_query.get(item_entity)
+    .expect("Item entity must have item component.");
+
     let content = spawn_item_details(commands.reborrow(), item);
     commands.trigger(ShowTooltip { content });
 }

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, fmt::Display};
+use std::{borrow::Cow, fmt::Display, ops::Deref};
 
 use bevy::{ecs::component::Component, platform::collections::HashMap};
 
@@ -13,7 +13,7 @@ pub enum Quality {
     /// An item with the specific number of prefixes and suffixes.
     /// For example, an item with Quality::Qaulity(2) will have 2
     /// prefixes and 2 suffixes for a total of 4 affixes.
-    Quality(i8),
+    Quality(u8),
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
@@ -51,7 +51,6 @@ pub(crate) enum PushAffixError {
 
 #[derive(Debug, Component)]
 pub(crate) struct AffixiveItem {
-    #[expect(unused)]
     base: Base,
     name: Cow<'static, str>,
     implicits: Vec<Implicit>,
@@ -86,16 +85,28 @@ impl AffixiveItem {
         }
     }
 
-    pub(crate) fn name(&self) -> &str {
+    pub fn name(&self) -> &str {
         &self.name
     }
 
-    pub(crate) fn implicits(&self) -> impl Iterator<Item=&Affix> {
-        self.implicits.iter().map(|i| &i.0)
+    pub fn base(&self) -> Base {
+        self.base
+    }
+
+    pub fn implicits(&self) -> impl Iterator<Item=&Affix> {
+        self.implicits.iter().map(Deref::deref)
+    }
+
+    pub fn prefixes(&self) -> impl Iterator<Item=&Affix> {
+        self.prefixes.iter().map(Deref::deref)
+    }
+
+    pub fn suffixes(&self) -> impl Iterator<Item=&Affix> {
+        self.suffixes.iter().map(Deref::deref)
     }
 
     #[allow(unused, reason = "Debug function")]
-    pub(crate) fn display(&self, bases: &HashMap<Base, AffixiveItemBase>) -> String {
+    pub fn display(&self, bases: &HashMap<Base, AffixiveItemBase>) -> String {
         let mut output = String::new();
 
         let name: &str = &self.name;
@@ -147,10 +158,16 @@ impl AffixiveItem {
         output
     }
 
+    pub fn increase_quality_to(&mut self, new_quality: u8) {
+        let Quality::Quality(current_quality) = self.quality else { return; };
+        if current_quality < new_quality {
+            self.quality = Quality::Quality(new_quality)
+        }
+    }
+
     /// Attempt to attach a prefix to this item.
     /// 
     /// Return Ok(()) if the prefix was added.
-    #[expect(unused)]
     pub fn try_push_prefix(&mut self, prefix: Prefix) -> Result<(), PushAffixError> {
         match self.quality {
             Quality::FixedArtifact => Err(PushAffixError::AffixiveItemIsFixed),

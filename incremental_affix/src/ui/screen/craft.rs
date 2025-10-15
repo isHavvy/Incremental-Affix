@@ -4,7 +4,7 @@ use bevy::picking::hover::Hovered;
 use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Activate, Button};
 
-use crate::incremental::item::{base::Base, item_database::ItemDatabase, CraftEvent};
+use crate::incremental::item::{base::Base, item_database::ItemDatabase, Crafted};
 use crate::incremental::stock::{StockKind, Stockyard};
 use crate::ui::{item::spawn_item_details, log::LogMessage, tooltip};
 use super::Screen;
@@ -109,7 +109,7 @@ fn handle_craft_button_click(
         item,
     )).id();
 
-    commands.trigger(CraftEvent { crafted_item: item_entity });
+    commands.trigger(Crafted { crafted_item: item_entity });
 }
 
 fn handle_craft_button_hover(
