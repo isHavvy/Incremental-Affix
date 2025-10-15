@@ -1,16 +1,17 @@
 use std::fmt::Write as _;
 
-use bevy::color::palettes::css::GRAY;
+use bevy::color::palettes::css::{self, GRAY};
 use bevy::ui::InteractionDisabled;
 use bevy::ui_widgets::Activate;
 use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Button};
 
-use crate::incremental::action::{Action, ActionProgress, ChangeAction, ChopSpeed, CurrentAction, KnownActions, LearnAction, MineSpeed, NO_CURRENT_ACTION_DISPLAY};
+use crate::incremental::action::{Action, ActionCritical, ActionProgress, ChangeAction, ChopSpeed, CurrentAction, KnownActions, LearnAction, MineSpeed, NO_CURRENT_ACTION_DISPLAY};
 use crate::ui::screen::Screen;
 
 const BUTTON_ENABLED_COLOR: Color = Color::BLACK;
 const BUTTON_DISABLED_COLOR: Color = Color::Srgba(GRAY);
+const ACTION_BAR_WIDTH: Val = Val::Px(400.0);
 
 pub struct ActionScreenPlugin;
 
@@ -19,30 +20,33 @@ impl Plugin for ActionScreenPlugin {
         app
 
         .add_systems(Update, (
-            update_action_progress_bar,
+            update_action_bar_progress_bar,
+            update_action_bar_critical_bar,
             on_changed_can_mine_system,
             on_changed_can_chop_system,
             on_current_action_change_system,
         ))
 
         .add_observer(on_learn_action)
-
         ;
     }
 }
 
 #[derive(Debug, Resource)]
-pub struct ActionProgressBar {
+struct ActionProgressBar {
+    /// The bar that fills up as action progress occurs.
+    progress_bar: Entity,
+
+    /// The bar that fills down as critical time is used up.
+    critical_bar: Entity,
+
+    /// The text node inside the action bar.
     text: Entity,
-    bar: Entity
 }
 
 pub fn initialize_actions_screen(
     mut commands: Commands,
-
     container: Entity,
-
-    action_progress: Res<ActionProgress>,
     known_actions: Res<KnownActions>,
 ) {
     let screen = commands.spawn((
@@ -56,13 +60,23 @@ pub fn initialize_actions_screen(
         ChildOf(container)
     )).id();
 
-    let action_progress_bar_outer = commands.spawn((
-        Node {
-            box_sizing: BoxSizing::BorderBox,
-            height: px(25),
-            width: px(400),
+    spawn_action_bar(commands.reborrow(), screen);
 
-            margin: px(8).all(),
+    for action in Action::LIST.iter().copied() {
+        spawn_action_button(action, commands.reborrow(), &known_actions, screen);
+    }
+}
+
+fn spawn_action_bar(
+    mut commands: Commands,
+    container: Entity,
+) {
+    let outer = commands.spawn((
+        Node {
+            box_sizing: BoxSizing::ContentBox,
+            height: px(21),
+            width: ACTION_BAR_WIDTH,
+
             border: px(2).all(),
 
             justify_content: JustifyContent::FlexStart,
@@ -70,30 +84,47 @@ pub fn initialize_actions_screen(
 
             ..default()
         },
-        BackgroundColor(Color::srgb_u8(255, 255, 255)),
+        BackgroundColor(Color::WHITE),
         BorderColor::all(Color::BLACK),
-        ChildOf(screen),
+        ChildOf(container),
     )).id();
 
-    let action_progress_bar = commands.spawn((
+    let progress_bar = commands.spawn((
         Node {
-            display: Display::Block,
-            height: Val::Percent(100.0),
-            width: Val::Percent(action_progress.0),
+            width: percent(0),
+            height: percent(100),
+
             align_content: AlignContent::Center,
             justify_content: JustifyContent::Center,
             ..default()
         },
-        BackgroundColor(Color::srgb(1.0, 0.0, 0.0).into()),
-        ChildOf(action_progress_bar_outer),
+        BackgroundColor(Color::srgb(1.0, 0.0, 0.0)),
+        ZIndex(0),
+
+        ChildOf(outer),
     )).id();
 
-    let action_bar_text = commands.spawn((
+    let critical_bar = commands.spawn((
         Node {
             position_type: PositionType::Absolute,
-            width: px(400),
+            width: ACTION_BAR_WIDTH,
+            top: percent(67),
+            height: percent(33),
             ..default()
         },
+        BackgroundColor(css::LIMEGREEN.into()),
+        ZIndex(1),
+
+        ChildOf(outer),
+    )).id();
+
+    let text = commands.spawn((
+        Node {
+            position_type: PositionType::Absolute,
+            width: ACTION_BAR_WIDTH,
+            ..default()
+        },
+        ZIndex(2),
 
         Text::new(NO_CURRENT_ACTION_DISPLAY),
         TextColor(Color::BLACK),
@@ -102,17 +133,14 @@ pub fn initialize_actions_screen(
             ..default()
         },
 
-        ChildOf(action_progress_bar_outer),
+        ChildOf(outer),
     )).id();
 
     commands.insert_resource(ActionProgressBar {
-        text: action_bar_text,
-        bar: action_progress_bar,
+        text,
+        progress_bar,
+        critical_bar,
     });
-
-    for action in Action::LIST.iter().copied() {
-        spawn_action_button(action, commands.reborrow(), &known_actions, screen);
-    }
 }
 
 fn spawn_action_button(
@@ -165,26 +193,29 @@ fn spawn_action_button(
     ));
 }
 
-fn update_action_progress_bar(
+fn update_action_bar_progress_bar(
     progress: Res<ActionProgress>,
     progress_bar: Res<ActionProgressBar>,
-    mut progress_bar_style_query: Query<&mut Node>,
+    mut node_query: Query<&mut Node>,
 ) {
-    let progress_bar = progress_bar.bar;
-    let mut node = progress_bar_style_query.get_mut(progress_bar).expect("Progress bar entity must have a style.");
-    node.width = Val::Px(400.0 * progress.0);
+    let progress_bar = progress_bar.progress_bar;
+    let mut node = node_query.get_mut(progress_bar).expect("Progress bar entity must have a Node component.");
+    node.width = ACTION_BAR_WIDTH * progress.0;
 }
 
 fn on_current_action_change_system(
     current_action: Res<CurrentAction>,
     progress_bar: Res<ActionProgressBar>,
 
-    mut text_query: Query<&mut Text>
+    mut text_query: Query<&mut Text>,
+    mut node_query: Query<&mut Node>,
 ) {
-
     if !current_action.is_changed() {
         return;
     }
+
+    let mut node = node_query.get_mut(progress_bar.critical_bar).expect("Critical bar entity must have a Node component.");
+    node.width = percent(0);
 
     let mut text = text_query.get_mut(progress_bar.text).expect("Progress bar text entity must have a Text component.");
     text.clear();
@@ -267,4 +298,16 @@ fn on_changed_can_chop_system(
             text_color_query.get_mut(children[0]).unwrap().0 = BUTTON_DISABLED_COLOR;
         }
     });
+}
+
+fn update_action_bar_critical_bar(
+    action_bar: Res<ActionProgressBar>,
+    action_critical: Res<ActionCritical>,
+
+    mut node_query: Query<&mut Node>,
+) {
+    let percent = action_critical.time_left().as_secs_f32() / 5.0;
+
+    let mut critical_bar_node = node_query.get_mut(action_bar.critical_bar).expect("Critical bar entity must have a Node component.");
+    critical_bar_node.width = ACTION_BAR_WIDTH * percent;
 }

@@ -60,7 +60,7 @@ impl ToString for StockKind {
 pub struct Stock {
     current: i64,
     maximum: Option<i64>,
-    pub change: i64,
+    pub change: f64,
 
     /// Whether or not the stock has changed since UI has last looked at it.
     has_changed: bool,
@@ -68,7 +68,7 @@ pub struct Stock {
 
 impl Stock {
     fn new(current: i64, maximum: Option<i64>) -> Self {
-        Self { current, maximum, change: 0, has_changed: true }
+        Self { current, maximum, change: 0.0, has_changed: true }
     }
 }
 
@@ -156,7 +156,7 @@ fn tick_stockyard_system(
 ) {
     if tick_timer.tick(time.delta()).just_finished() {
         for (_key, stock) in &mut stockyard.0 {
-            *stock += stock.change;
+            *stock += stock.change as i64;
         }
     }
 }

@@ -12,6 +12,7 @@ impl GameLogPlugin {
         let log_ui = commands.spawn((
             ChildOf(parent),
             Node {
+                flex_direction: FlexDirection::Column,
                 ..default()
             },
             BackgroundColor(Color::srgb_u8(15, 15, 15)),

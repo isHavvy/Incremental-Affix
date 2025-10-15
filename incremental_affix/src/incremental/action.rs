@@ -1,8 +1,10 @@
 use std::fmt::Display;
+use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::platform::collections::HashSet;
 
+use crate::incremental::critical::Critical;
 use crate::incremental::ExplorationProgress;
 use crate::ui::log::LogMessage;
 use crate::incremental::stock::{StockKind, Stockyard};
@@ -19,9 +21,11 @@ impl Plugin for ActionPlugin {
         .init_resource::<KnownActions>()
         .insert_resource(MineSpeed(0.))
         .insert_resource(ChopSpeed(0.))
+        .insert_resource(ActionCritical { critical: Critical::new(), timer: None })
+        .init_resource::<CriticalTimer>()
         .add_observer(on_learn_action)
         .add_observer(on_change_action)
-        .add_systems(FixedUpdate, (progress_system,))
+        .add_systems(FixedUpdate, (progress_system, critical_check_system))
         ;
     }
 }
@@ -53,6 +57,17 @@ impl Action {
             Action::CreateFollowers => todo!(),
         }
     }
+
+    /// If the action passively increases a stock.
+    pub const fn is_passive(self) -> bool {
+        match self {
+            | Action::GatherWood
+            | Action::GatherStone
+            => true,
+
+            _ => false,
+        }
+    }
 }
 
 impl Display for Action {
@@ -66,7 +81,7 @@ impl Display for Action {
     }
 }
 
-#[derive(Debug, Default, Resource, Deref)]
+#[derive(Debug, Default, Resource, Deref, DerefMut)]
 pub struct ActionProgress(pub f32);
 
 impl ActionProgress {
@@ -75,7 +90,7 @@ impl ActionProgress {
     }
 }
 
-#[derive(Debug, Default, Resource, Deref)]
+#[derive(Debug, Default, Resource, Deref, DerefMut)]
 pub struct CurrentAction(pub Option<Action>);
 
 impl CurrentAction {
@@ -155,19 +170,23 @@ fn progress_system(
 ) {
     let current_action = match current_action.0 {
         None => return,
-        Some(current_action ) if current_action.progresses() => current_action,
+        Some(current_action ) if current_action.progresses() || current_action.is_passive() => current_action,
         _ => return,
     };
 
-    let duration = time.delta();
+    **progress += time.delta().as_secs_f32() / 5.0;
 
-    progress.0 += duration.as_secs_f32() / 5.0;
-
-    if progress.0 >= 1.0 {
-        progress.0 -= 1.0;
+    if **progress >= 1.0 {
+        **progress -= 1.0;
         
+        if !current_action.progresses() {
+            return;
+        }
+
         // This could also be changed to firing an event
         // if the code in here becomes too unweildy.
+        // Or well, because the logic here is about a specific action
+        // and not actions in general like this module should be.
         match current_action {
             Action::Explore => {
                 exploration_progress.0 += 1;
@@ -194,6 +213,93 @@ fn progress_system(
     }
 }
 
+#[derive(Debug, Resource, Deref, DerefMut)]
+struct CriticalTimer(Timer);
+
+impl CriticalTimer {
+    fn new() -> Self {
+        let mut timer = Timer::from_seconds(5.0, TimerMode::Repeating);
+        timer.pause();
+        Self(timer)
+    }
+}
+
+impl Default for CriticalTimer {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Resource)]
+pub struct ActionCritical {
+    critical: Critical,
+    timer: Option<Timer>,
+}
+
+impl ActionCritical {
+    fn reset(&mut self) {
+        self.timer = None;
+    }
+
+    pub fn time_left(&self) -> Duration {
+        self.timer.as_ref().map_or(Duration::ZERO, Timer::remaining)
+    }
+}
+
+fn critical_check_system(
+    time: Res<Time>,
+
+    current_action: ResMut<CurrentAction>,
+
+    chop_speed: Res<ChopSpeed>,
+    mine_speed: Res<MineSpeed>,
+
+    mut critical_check_timer: ResMut<CriticalTimer>,
+    mut action_critical: ResMut<ActionCritical>,
+    mut stockyard: ResMut<Stockyard>,
+) {
+    let Some(current_action) = **current_action else { return; };
+
+    if !current_action.is_passive() {
+        return;
+    }
+
+    if critical_check_timer.tick(time.delta()).just_finished() && action_critical.critical.check() {
+        match current_action {
+            Action::GatherWood => {
+                stockyard[StockKind::Wood].change *= action_critical.critical.multiplier;
+                action_critical.timer = Some(Timer::new(action_critical.critical.time, TimerMode::Once));
+            },
+            Action::GatherStone => {
+                stockyard[StockKind::Stone].change *= action_critical.critical.multiplier;
+                action_critical.timer = Some(Timer::new(action_critical.critical.time, TimerMode::Once));
+            },
+
+            _ => {
+                panic!("Critical hit detected for an action without a critical.");
+            }
+        }
+    }
+
+    if let Some(timer) = &mut action_critical.timer && timer.tick(time.delta()).just_finished() {
+        match current_action {
+            Action::GatherWood => {
+                stockyard[StockKind::Wood].change = chop_speed.0;
+                action_critical.timer = None;
+            },
+            Action::GatherStone => {
+                stockyard[StockKind::Stone].change = mine_speed.0;
+                action_critical.timer = None;
+            },
+
+            _ => {
+                panic!("Critical hit timer timed out for an action without a critical.");
+            }
+        }
+    }
+}
+
 #[derive(Debug, Event)]
 pub struct ChangeAction {
     pub action: Action
@@ -207,7 +313,7 @@ impl ChangeAction {
     }
 }
 
-pub fn on_change_action(
+fn on_change_action(
     event: On<ChangeAction>,
 
     mut stockyard: ResMut<Stockyard>,
@@ -216,6 +322,8 @@ pub fn on_change_action(
 
     mut current_action: ResMut<CurrentAction>,
     mut action_progress: ResMut<ActionProgress>,
+    mut action_critical: ResMut<ActionCritical>,
+    mut critical_timer: ResMut<CriticalTimer>,
 ) {
     // Changing to current action. Disregard.
     if Some(event.action) == current_action.0 {
@@ -223,16 +331,19 @@ pub fn on_change_action(
     }
 
     action_progress.reset();
+    action_critical.reset();
+    critical_timer.reset();
+    
 
     match current_action.0 {
         None | Some(Action::Explore) | Some(Action::CreateFollowers) => {},
 
         Some(Action::GatherWood) => {
-            stockyard[StockKind::Wood].change = 0;
+            stockyard[StockKind::Wood].change = 0.0;
         },
 
         Some(Action::GatherStone) => {
-            stockyard[StockKind::Stone].change = 0;
+            stockyard[StockKind::Stone].change = 0.0;
         },
     }
 
@@ -243,9 +354,11 @@ pub fn on_change_action(
         Action::Explore => {},
         Action::GatherWood => {
             stockyard[StockKind::Wood].change = (chop_speed.0 * 5.) as _;
+            critical_timer.unpause();
         },
         Action::GatherStone => {
             stockyard[StockKind::Stone].change = (mine_speed.0 * 5.) as _;
+            critical_timer.unpause();
         },
         Action::CreateFollowers => {},
     }
