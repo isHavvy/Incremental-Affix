@@ -243,6 +243,16 @@ fn on_activate_button_roll(
             log_writer.write(LogMessage::new("Cannot add prefix. Item quality too low."));
         },
     }
+
+    match db.try_push_random_suffix(&mut item) {
+        Ok(_) => {},
+        Err(PushAffixError::AffixiveItemIsFixed) => {
+            log_writer.write(LogMessage::new("You cannot modify the affixes of this."));
+        },
+        Err(PushAffixError::AffixiveItemQualityTooLow) => {
+            log_writer.write(LogMessage::new("Cannot add prefix. Item quality too low."));
+        },
+    }
 }
 
 fn on_inventory_hover(

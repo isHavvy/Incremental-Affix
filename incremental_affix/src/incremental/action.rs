@@ -310,14 +310,18 @@ fn on_change_action(
         Action::Explore => {},
         Action::GatherWood => {
             let stock = &mut stockyard[StockKind::Wood];
-            stock.set_player_action_base_modifier(player_action_bonuses.gather_wood.base_gain_per_second);
-            stock.set_player_action_affinity_multiplier(Affinity::new().multiplier);
+            let bonuses = &player_action_bonuses.gather_wood;
+            stock.set_player_action_base_modifier(bonuses.base_gain_per_second);
+            stock.set_player_action_affinity_multiplier(bonuses.affinity.multiplier);
+            action_affinity.affinity = bonuses.affinity;
             affinity_timer.unpause();
         },
         Action::GatherStone => {
             let stock = &mut stockyard[StockKind::Stone];
-            stock.set_player_action_base_modifier(player_action_bonuses.gather_stone.base_gain_per_second);
-            stock.set_player_action_affinity_multiplier(Affinity::new().multiplier);
+            let bonuses = &player_action_bonuses.gather_stone;
+            stock.set_player_action_base_modifier(bonuses.base_gain_per_second);
+            stock.set_player_action_affinity_multiplier(bonuses.affinity.multiplier);
+            action_affinity.affinity = bonuses.affinity;
             affinity_timer.unpause();
         },
         Action::CreateFollowers => {},

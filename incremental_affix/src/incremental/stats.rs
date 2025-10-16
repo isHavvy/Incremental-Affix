@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::incremental::action::Action;
+use crate::incremental::{action::Action, affinity::Affinity};
 
 /// Stats for all player actions
 #[derive(Debug, Resource)]
@@ -35,12 +35,14 @@ impl PlayerActionsStats {
 #[derive(Debug)]
 pub struct PlayerActionStats {
     pub base_gain_per_second: f64,
+    pub affinity: Affinity,
 }
 
 impl Default for PlayerActionStats {
     fn default() -> Self {
         Self {
             base_gain_per_second: 0.0,
+            affinity: Affinity::default(),
         }
     }
 }

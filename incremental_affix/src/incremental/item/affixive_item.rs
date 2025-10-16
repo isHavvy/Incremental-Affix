@@ -182,7 +182,6 @@ impl AffixiveItem {
     /// Attempt to attach a suffix to this item.
     /// 
     /// Return Ok(()) if the suffix was added.
-    #[expect(unused)]
     pub fn try_push_suffix(&mut self, suffix: Suffix) -> Result<(), PushAffixError> {
         match self.quality {
             Quality::FixedArtifact => Err(PushAffixError::AffixiveItemIsFixed),

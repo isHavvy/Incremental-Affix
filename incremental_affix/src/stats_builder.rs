@@ -40,6 +40,10 @@ impl StatsBuilder {
         self.multiplier += multiplier;
     }
 
+    pub fn add_multiplier_percent(&mut self, multiplier: i32) {
+        self.add_multiplier(multiplier as f64 / 100.0);
+    }
+
     pub fn calculate(&self) -> f64 {
         if self.base == 0.0 {
             0.0

@@ -17,7 +17,7 @@ impl Modifier {
     }
 
     fn random_modifier_value(&self) -> ModifierValue {
-        rand::thread_rng().gen_range(self.min..self.max + 1)
+        rand::rng().random_range(self.min..self.max + 1)
     }
 }
 
@@ -124,26 +124,28 @@ impl DerefMut for Suffix {
 // --- Actual modifiers below --- //
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-#[expect(unused)]
 pub enum ModifierKind {
     /// Base amount of wood added to the stockyard per second when the player uses Gather Wood in hundredths
     WoodBase,
     /// Adds to this item's base wood gain by hundreds of the modifier's value
     WoodBaseGain,
     WoodMultiplier,
-    WoodAffinityChanceMultiplier, // UNIMPLED
-    WoodAffinityMultiplier, // UNIMPLED
-    WoodAffinityTimeMultiplier, // UNIMPLED
+    WoodAffinityChanceMultiplier,
+    WoodAffinityMultiplier,
+    WoodAffinityTimeMultiplier,
 
     /// Base amount of stone added to the stockyard per second when the player uses Gather Stone in hundredths
     StoneBase,
     StoneBaseGain,
     StoneMultiplier,
-    StoneAffinityChanceMultiplier, // UNIMPLED
-    StoneAffinityMultiplier, // UNIMPLED
-    StoneAffinityTimeMultiplier, // UNIMPLED
+    StoneAffinityChanceMultiplier,
+    StoneAffinityMultiplier,
+    StoneAffinityTimeMultiplier,
 
-    ToolAffinityChanceMultiplier, // UNIMPLED
+    ToolMultiplier,
+    ToolAffinityChanceMultiplier,
+    ToolAffinityMultiplier,
+    ToolAffinityTimeMultiplier,
 }
 
 impl ModifierKind {
@@ -157,21 +159,24 @@ impl ModifierKind {
         }
 
         match *self {
-            ModifierKind::WoodBase => format!("Chopping wood gives {} wood per second", percent(actual)),
+            ModifierKind::WoodBase => format!("Chopping wood produces {} wood per second", percent(actual)),
             ModifierKind::WoodBaseGain => format!("{}{} Wood chopped per second", sign(actual), percent(actual)),
             ModifierKind::WoodMultiplier => format!("{}{}% Wood chopped per second", sign(actual), actual),
             ModifierKind::WoodAffinityChanceMultiplier => format!("{}{}% Wood affinity chance", sign(actual), actual),
             ModifierKind::WoodAffinityMultiplier => format!("{}{}% Wood affinity gain", sign(actual), actual),
             ModifierKind::WoodAffinityTimeMultiplier => format!("{}{}% Wood affinity time", sign(actual), actual),
 
-            ModifierKind::StoneBase => format!("Mining stone gives {} stone per second", percent(actual)),
-            ModifierKind::StoneBaseGain => format!("{}{} Stone mined per second", sign(actual), actual),
+            ModifierKind::StoneBase => format!("Mining stone produces {} stone per second", percent(actual)),
+            ModifierKind::StoneBaseGain => format!("{}{} Stone mined per second", sign(actual), percent(actual)),
             ModifierKind::StoneMultiplier => format!("{}{}% Stone mined per second", sign(actual), actual),
             ModifierKind::StoneAffinityChanceMultiplier => format!("{}{} Stone affinity chance", sign(actual), actual),
             ModifierKind::StoneAffinityMultiplier => format!("{}{}% Stone affinity gain", sign(actual), actual),
             ModifierKind::StoneAffinityTimeMultiplier => format!("{}{}% Sone affinity time", sign(actual), actual),
 
+            ModifierKind::ToolMultiplier => format!("Tool actions produce {}{}% additional resources per second", sign(actual), actual),
             ModifierKind::ToolAffinityChanceMultiplier => format!("{}{} Tool action affinity chance", sign(actual), percent(actual)),
+            ModifierKind::ToolAffinityMultiplier => format!("{}{}% affinity multiplier for tool actions", sign(actual), percent(actual)),
+            ModifierKind::ToolAffinityTimeMultiplier => format!("{}{}% affinity time multiplier for tool actions", sign(actual), percent(actual)),
         }
     }
 }
@@ -190,6 +195,14 @@ pub(crate) fn initialize_implicits() -> Vec<Implicit> {
 pub(crate) fn initialize_prefixes() -> Vec<Prefix> {
     let mods = vec![
         Affix::new("Lumberjack's".to_string(), Modifier { kind: ModifierKind::WoodBaseGain, min: 10, max: 20 }),
+        Affix::new("Tree Feller's".to_string(), Modifier { kind: ModifierKind::WoodMultiplier, min: 10, max: 20 }),
+        Affix::new("'s".to_string(), Modifier { kind: ModifierKind::WoodAffinityMultiplier, min: 50, max: 100 }),
+
+        Affix::new("'s".to_string(), Modifier { kind: ModifierKind::StoneBaseGain, min: 10, max: 20 }),
+        Affix::new("'s".to_string(), Modifier { kind: ModifierKind::StoneMultiplier, min: 10, max: 20 }),
+        Affix::new("'s".to_string(), Modifier { kind: ModifierKind::StoneAffinityMultiplier, min: 50, max: 100 }),
+
+        Affix::new("'s".to_string(), Modifier { kind: ModifierKind::ToolMultiplier, min: 5, max: 15 })
     ];
 
     mods.into_iter().map(Prefix).collect()
@@ -197,7 +210,15 @@ pub(crate) fn initialize_prefixes() -> Vec<Prefix> {
 
 pub(crate) fn initialize_suffixes() -> Vec<Suffix> {
     let mods = vec![
-        Affix::new("ingenuity".to_string(), Modifier { kind: ModifierKind::ToolAffinityChanceMultiplier, min: 50, max: 100 }),
+        Affix::new("".to_string(), Modifier { kind: ModifierKind::WoodAffinityChanceMultiplier, min: 50, max: 100 }),
+        Affix::new("".to_string(), Modifier { kind: ModifierKind::WoodAffinityTimeMultiplier, min: 100, max: 200 }),
+
+        Affix::new("".to_string(), Modifier { kind: ModifierKind::StoneAffinityChanceMultiplier, min: 50, max: 100 }),
+        Affix::new("".to_string(), Modifier { kind: ModifierKind::StoneAffinityTimeMultiplier, min: 100, max: 200 }),
+
+        Affix::new("ingenuity".to_string(), Modifier { kind: ModifierKind::ToolAffinityChanceMultiplier, min: 25, max: 50 }),
+        Affix::new("".to_string(), Modifier { kind: ModifierKind::ToolAffinityMultiplier, min: 30, max: 70 }),
+        Affix::new("".to_string(), Modifier { kind: ModifierKind::ToolAffinityTimeMultiplier, min: 75, max: 150 }),
     ];
 
     mods.into_iter().map(Suffix).collect()
