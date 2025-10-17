@@ -49,10 +49,12 @@ pub fn spawn_inventory_screen(mut commands: Commands, parent: Entity) {
             ..default()
         },
         BackgroundColor(Color::srgb_u8(137, 81, 41)),
+
         ChildOf(inventory_screen)
     )).id();
 
     let tool_slot = spawn_slot(commands.reborrow(), slots, ItemSlotTag::Tool);
+    let _hunt_slot = spawn_slot(commands.reborrow(), slots, ItemSlotTag::Hunt);
 
     commands.insert_resource(ActiveSlot(tool_slot));
     commands.insert_resource(InventoryScreen(inventory_screen));
@@ -76,8 +78,10 @@ fn spawn_slot(mut commands: Commands, parent: Entity, slot_tag: ItemSlotTag) -> 
         BorderColor::all(Color::BLACK),
         BackgroundColor(Color::srgb(0., 0.7, 0.)),
 
+        Button,
         observe(on_slot_hover),
         observe(on_out_hide_tooltip),
+        observe(on_slot_activate),
 
         ItemSlot {
             tag: slot_tag,
@@ -88,7 +92,7 @@ fn spawn_slot(mut commands: Commands, parent: Entity, slot_tag: ItemSlotTag) -> 
     )).id();
 
     let _slot_name = commands.spawn((
-        Text::new("Tool"),
+        Text::new(slot_tag.to_string()),
         ChildOf(container),
     ));
 
@@ -291,4 +295,12 @@ fn on_out_hide_tooltip(
     mut commands: Commands,
 ) {
     commands.trigger(HideTooltip);
+}
+
+fn on_slot_activate(
+    event: On<Activate>,
+
+    mut active_slot: ResMut<ActiveSlot>,
+) {
+    active_slot.0 = event.entity;
 }

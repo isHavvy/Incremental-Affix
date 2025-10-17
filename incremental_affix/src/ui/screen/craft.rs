@@ -39,7 +39,7 @@ pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {
         ChildOf(screen)
     ));
 
-    for base in const { [Base::MakeshiftTools, Base::TestTools, Base::StoneTools] }.into_iter() {
+    for base in const { [Base::MakeshiftTools, Base::TestTools, Base::StoneTools, Base::WoodenHunt,] }.into_iter() {
         commands.spawn((
             Node {
                 width: px(200),
@@ -99,6 +99,15 @@ fn handle_craft_button_click(
             }
 
             stockyard[StockKind::Stone] -= 5.0;
+            stockyard[StockKind::Wood] -= 5.0;
+        },
+
+        Base::WoodenHunt => {
+            if stockyard[StockKind::Wood] < 5.0 {
+                messages.write(LogMessage("Unable to craft wooden hunting weapon. Need 5 wood.".into()));
+                return;
+            }
+
             stockyard[StockKind::Wood] -= 5.0;
         }
     }

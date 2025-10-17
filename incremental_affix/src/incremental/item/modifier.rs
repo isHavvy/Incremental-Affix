@@ -146,6 +146,8 @@ pub enum ModifierKind {
     ToolAffinityChanceMultiplier,
     ToolAffinityMultiplier,
     ToolAffinityTimeMultiplier,
+
+    HuntBase,
 }
 
 impl ModifierKind {
@@ -177,6 +179,8 @@ impl ModifierKind {
             ModifierKind::ToolAffinityChanceMultiplier => format!("{}{} Tool action affinity chance", sign(actual), percent(actual)),
             ModifierKind::ToolAffinityMultiplier => format!("{}{}% affinity multiplier for tool actions", sign(actual), percent(actual)),
             ModifierKind::ToolAffinityTimeMultiplier => format!("{}{}% affinity time multiplier for tool actions", sign(actual), percent(actual)),
+
+            ModifierKind::HuntBase => format!("Hunting produces {} carcasses per second", percent(actual)),
         }
     }
 }
@@ -187,6 +191,7 @@ pub(crate) fn initialize_implicits() -> Vec<Implicit> {
         Affix::new("Tier0ToolsGatherStoneBase".to_string(), Modifier { kind: ModifierKind::StoneBase, min: 50, max: 50 }),
         Affix::new("Tier1ToolsGatherWoodBase".to_string(), Modifier { kind: ModifierKind::WoodBase, min: 80, max: 120 }),
         Affix::new("Tier1ToolsGatherStoneBase".to_string(), Modifier { kind: ModifierKind::StoneBase, min: 80, max: 120 }),
+        Affix::new("Tier0Bow".to_string(), Modifier { kind: ModifierKind::HuntBase, min: 15, max: 25 }),
     ];
 
     mods.into_iter().map(Implicit).collect()

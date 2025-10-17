@@ -5,19 +5,11 @@ use bevy::prelude::*;
 use crate::incremental::{action::Action, affinity::Affinity};
 
 /// Stats for all player actions
-#[derive(Debug, Resource)]
+#[derive(Debug, Resource, Default)]
 pub struct PlayerActionsStats {
     pub gather_wood: PlayerActionStats,
     pub gather_stone: PlayerActionStats,
-}
-
-impl Default for PlayerActionsStats {
-    fn default() -> Self {
-        Self {
-            gather_wood: Default::default(),
-            gather_stone: Default::default(),
-        }
-    }
+    pub hunt: PlayerActionStats,
 }
 
 impl PlayerActionsStats {
@@ -26,25 +18,18 @@ impl PlayerActionsStats {
             Action::Explore => None,
             Action::GatherWood => Some(&self.gather_wood),
             Action::GatherStone => Some(&self.gather_stone),
+            Action::Hunt => Some(&self.hunt),
+            Action::RenderCarcass => None,
             Action::CreateFollowers => None,
         }
     }
 }
 
 /// Stats for a specific action
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PlayerActionStats {
     pub base_gain_per_second: f64,
     pub affinity: Affinity,
-}
-
-impl Default for PlayerActionStats {
-    fn default() -> Self {
-        Self {
-            base_gain_per_second: 0.0,
-            affinity: Affinity::default(),
-        }
-    }
 }
 
 impl PlayerActionStats {

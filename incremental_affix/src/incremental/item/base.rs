@@ -13,6 +13,8 @@ pub enum Base {
     TestTools,
     MakeshiftTools,
     StoneTools,
+
+    WoodenHunt,
 }
 
 impl ToString for Base {
@@ -21,6 +23,8 @@ impl ToString for Base {
             Base::MakeshiftTools => "Makeshift Tools".to_string(),
             Base::TestTools => "Test Tools".to_string(),
             Base::StoneTools => "Stone Tools".to_string(),
+
+            Base::WoodenHunt => "Wooden Hunting Weapon".to_string(),
         }
     }
 }
@@ -60,6 +64,14 @@ pub fn initialize() -> HashMap<Base, AffixiveItemBase> {
         implicits: vec![
             ImplicitIndex(2),
             ImplicitIndex(3),
+        ]
+    });
+
+    map.insert(Base::WoodenHunt, AffixiveItemBase {
+        name: "Wooden Hunting Gear".into(),
+        tags: vec![ItemTag::Hunt],
+        implicits: vec![
+            ImplicitIndex(4),
         ]
     });
 

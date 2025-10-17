@@ -32,6 +32,9 @@ pub enum StockKind {
     Followers,
     Wood,
     Stone,
+    Carcass,
+    Meat,
+    Bone,
 }
 
 impl StockKind {
@@ -41,6 +44,9 @@ impl StockKind {
         Self::Followers,
         Self::Wood,
         Self::Stone,
+        Self::Carcass,
+        Self::Bone,
+        Self::Meat,
     ];
 }
 
@@ -52,6 +58,9 @@ impl ToString for StockKind {
             StockKind::Followers => "Followers",
             StockKind::Wood => "Wood",
             StockKind::Stone => "Stone",
+            StockKind::Carcass => "Carcasses",
+            StockKind::Meat => "Meat",
+            StockKind::Bone => "Bones",
         }.to_string()
     }
 }
@@ -66,6 +75,7 @@ pub struct Stock {
     player_action_base_modifier: f64,
     player_action_affinity_multiplier: f64,
     player_action_has_affinity: bool,
+    player_action_active: bool,
 
     /// Whether or not the stock has changed since `has_changed`
     /// 
@@ -84,6 +94,7 @@ impl Stock {
             player_action_base_modifier: 0.0,
             player_action_affinity_multiplier: 1.0,
             player_action_has_affinity: false,
+            player_action_active: true,
 
             has_changed: true,
         }
@@ -139,8 +150,6 @@ impl Stock {
 
         if change > 0.0 {
             string.push('+');
-        } else if change < 0.0 {
-            string.push('-');
         }
 
         let _ = write!(string, "{:.2})", change);
@@ -150,6 +159,10 @@ impl Stock {
 /// Modifying formula values for automatic stock updating per tick.
 impl Stock {
     pub fn get_change_per_tick(&self) -> f64 {
+        if !self.player_action_active {
+            return 0.0;
+        }
+
         let mut modifier = self.player_action_base_modifier / (IncrementalPlugin::TICKS_PER_SECOND as f64);
 
         if self.player_action_has_affinity {
@@ -178,6 +191,11 @@ impl Stock {
     }
 
     pub fn reset_player_action_modifiers(&mut self) {
+        self.player_action_active = true;
+        
+        if self.player_action_base_modifier == 0.0 { return; }
+
+        self.has_changed = true;
         self.player_action_base_modifier = 0.0;
         self.player_action_affinity_multiplier = 1.0;
         self.player_action_has_affinity = false;
@@ -193,27 +211,47 @@ impl Stock {
 }
 
 #[derive(Debug, Resource, Deref, DerefMut)]
-pub struct Stockyard(HashMap<StockKind, Stock>);
+pub struct Stockyard {
+    #[deref]
+    stocks: HashMap<StockKind, Stock>,
+    stop_player_action_when_empty: Option<StockKind>,
+}
 
 impl Stockyard {
     pub fn reset_player_action_modifiers(&mut self) {
+        self.stop_player_action_when_empty = None;
         for stock in self.values_mut() {
             stock.reset_player_action_modifiers();
         }
+    }
+
+    pub fn get_stocks_mut<const N: usize>(&mut self, stocks: [&StockKind; N]) -> [&mut Stock; N] {
+        // The unwrap will not panic because every stock kind has an associated value in the stockyard hashmap.
+        self.stocks.get_many_mut(stocks).map(Option::unwrap)
+    }
+
+    pub fn set_stop_player_action_when_empty(&mut self, stock_kind: StockKind) {
+        self.stop_player_action_when_empty = Some(stock_kind);
     }
 }
 
 impl Default for Stockyard {
     fn default() -> Self {
-        let mut resources = HashMap::new();
+        let mut stocks = HashMap::new();
 
-        resources.insert(StockKind::BranchesAndPebbles, Stock::new(0.0, None));
-        resources.insert(StockKind::Godpower, Stock::new(0.0, None));
-        resources.insert(StockKind::Followers, Stock::new(0.0, Some(10.0)));
-        resources.insert(StockKind::Wood, Stock::new(0.0, Some(100.0)));
-        resources.insert(StockKind::Stone, Stock::new(0.0, Some(100.0)));
+        stocks.insert(StockKind::BranchesAndPebbles, Stock::new(0.0, None));
+        stocks.insert(StockKind::Godpower, Stock::new(0.0, None));
+        stocks.insert(StockKind::Followers, Stock::new(0.0, Some(10.0)));
+        stocks.insert(StockKind::Wood, Stock::new(0.0, Some(100.0)));
+        stocks.insert(StockKind::Stone, Stock::new(0.0, Some(100.0)));
+        stocks.insert(StockKind::Carcass, Stock::new(0.0, Some(10.0)));
+        stocks.insert(StockKind::Bone, Stock::new(0.0, Some(100.0)));
+        stocks.insert(StockKind::Meat, Stock::new(0.0, Some(100.0)));
 
-        Self(resources)
+        Self {
+            stocks,
+            stop_player_action_when_empty: None,
+        }
     }
 }
 
@@ -221,13 +259,13 @@ impl Index<StockKind> for Stockyard {
     type Output = Stock;
 
     fn index(&self, index: StockKind) -> &Self::Output {
-        &self.0[&index]
+        &self.stocks[&index]
     }
 }
 
 impl IndexMut<StockKind> for Stockyard {
     fn index_mut(&mut self, index: StockKind) -> &mut Self::Output {
-        self.0.get_mut(&index).expect("The Stockyard stock map should contain values for each kind of stock.")
+        self.stocks.get_mut(&index).expect("The Stockyard stocks map should contain values for each StockKind.")
     }
 }
 
@@ -236,6 +274,14 @@ fn tick_stockyard_system(
     mut tick_timer: ResMut<TickTimer>,
     mut stockyard: ResMut<Stockyard>
 ) {
+    // This whole block is so badly written.
+    if let Some(stock_kind) = stockyard.stop_player_action_when_empty {
+        let player_action_active = stockyard[stock_kind] != 0.0;
+        for stock in &mut stockyard.values_mut() {
+            stock.player_action_active = player_action_active;
+        }
+    }
+
     if tick_timer.tick(time.delta()).just_finished() {
         for stock in &mut stockyard.values_mut() {
             *stock += stock.get_change_per_tick() as _;

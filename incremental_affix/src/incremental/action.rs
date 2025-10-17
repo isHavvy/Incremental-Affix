@@ -37,6 +37,8 @@ pub enum Action {
     Explore,
     GatherWood,
     GatherStone,
+    Hunt,
+    RenderCarcass,
     CreateFollowers,
 }
 
@@ -45,15 +47,15 @@ impl Action {
         Self::Explore,
         Self::GatherWood,
         Self::GatherStone,
+        Self::Hunt,
+        Self::RenderCarcass,
         Self::CreateFollowers,
     ];
 
     pub const fn progresses(&self) -> bool {
         match self {
             Action::Explore => true,
-            Action::GatherWood => false,
-            Action::GatherStone => false,
-            Action::CreateFollowers => todo!(),
+            _ => false,
         }
     }
 
@@ -62,6 +64,7 @@ impl Action {
         match self {
             | Action::GatherWood
             | Action::GatherStone
+            | Action::Hunt
             => true,
 
             _ => false,
@@ -75,6 +78,8 @@ impl Display for Action {
             Self::Explore => "Explore",
             Self::GatherWood => "Gather Wood",
             Self::GatherStone => "Gather Stone",
+            Self::Hunt => "Hunt",
+            Self::RenderCarcass => "Render Carcasses",
             Self::CreateFollowers => "Create Followers",
         })
     }
@@ -115,6 +120,8 @@ impl Default for KnownActions {
         let mut set = HashSet::new();
         set.insert(Action::Explore);
         set.insert(Action::CreateFollowers);
+        set.insert(Action::Hunt);
+        set.insert(Action::RenderCarcass);
 
         Self(set)
     }
@@ -323,6 +330,26 @@ fn on_change_action(
             stock.set_player_action_affinity_multiplier(bonuses.affinity.multiplier);
             action_affinity.affinity = bonuses.affinity;
             affinity_timer.unpause();
+        },
+        Action::Hunt => {
+            let stock = &mut stockyard[StockKind::Carcass];
+            let bonuses = &player_action_bonuses.hunt;
+            stock.set_player_action_base_modifier(bonuses.base_gain_per_second);
+            stock.set_player_action_affinity_multiplier(bonuses.affinity.multiplier);
+            action_affinity.affinity = bonuses.affinity;
+            affinity_timer.unpause();
+        },
+        Action::RenderCarcass => {
+            let [
+                stock_carcass,
+                stock_meat,
+                stock_bones,
+            ] = stockyard.get_stocks_mut([&StockKind::Carcass, &StockKind::Meat, &StockKind::Bone]);
+
+            stock_carcass.set_player_action_base_modifier(-0.2);
+            stock_meat.set_player_action_base_modifier(0.2);
+            stock_bones.set_player_action_base_modifier(0.2 / 5.0);
+            stockyard.set_stop_player_action_when_empty(StockKind::Carcass);
         },
         Action::CreateFollowers => {},
     }

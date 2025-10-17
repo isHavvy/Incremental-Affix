@@ -22,12 +22,14 @@ pub struct ImplicitIndex(pub usize);
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
 pub enum ItemTag {
     Tool,
+    Hunt,
 }
 
 impl Display for ItemTag {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let string = match self {
             ItemTag::Tool => "Tool",
+            ItemTag::Hunt => "Hunting Weapon",
         };
 
         f.write_str(string)?;
@@ -39,6 +41,7 @@ impl From<ItemSlotTag> for ItemTag {
     fn from(slot_tag: ItemSlotTag) -> Self {
         match slot_tag {
             ItemSlotTag::Tool => ItemTag::Tool,
+            ItemSlotTag::Hunt => Self::Hunt
         }
     }
 }
