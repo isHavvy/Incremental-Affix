@@ -4,13 +4,17 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::platform::collections::HashSet;
 
+use crate::incremental::action::change::ResetPlayerAction;
 use crate::incremental::affinity::Affinity;
-use crate::incremental::stats::PlayerActionsStats;
 use crate::incremental::ExplorationProgress;
 use crate::ui::log::LogMessage;
 use crate::incremental::stock::{StockKind, Stockyard};
 
+pub use change::ChangeAction;
+
 pub const NO_CURRENT_ACTION_DISPLAY: &str = "Doing Nothing";
+
+mod change;
 
 pub struct ActionPlugin;
 
@@ -23,7 +27,8 @@ impl Plugin for ActionPlugin {
         .insert_resource(ActionAffinity { affinity: Affinity::new(), timer: None })
         .init_resource::<AffinityTimer>()
         .add_observer(on_learn_action)
-        .add_observer(on_change_action)
+        .add_observer(change::on_change_action)
+        .add_observer(change::on_reset_player_action)
         .add_systems(FixedUpdate, (progress_system, affinity_check_system))
         ;
     }
@@ -39,6 +44,7 @@ pub enum Action {
     GatherStone,
     Hunt,
     RenderCarcass,
+    CookMeat,
     CreateFollowers,
 }
 
@@ -49,12 +55,14 @@ impl Action {
         Self::GatherStone,
         Self::Hunt,
         Self::RenderCarcass,
+        Self::CookMeat,
         Self::CreateFollowers,
     ];
 
     pub const fn progresses(&self) -> bool {
         match self {
             Action::Explore => true,
+            Action::CreateFollowers => true,
             _ => false,
         }
     }
@@ -70,6 +78,10 @@ impl Action {
             _ => false,
         }
     }
+
+    pub fn progress_time(self) -> f32 {
+        if self == Action::CreateFollowers { 30.0 } else { 5.0 }
+    }
 }
 
 impl Display for Action {
@@ -80,17 +92,21 @@ impl Display for Action {
             Self::GatherStone => "Gather Stone",
             Self::Hunt => "Hunt",
             Self::RenderCarcass => "Render Carcasses",
+            Self::CookMeat => "Cook Meat",
             Self::CreateFollowers => "Create Followers",
         })
     }
 }
 
-#[derive(Debug, Default, Resource, Deref, DerefMut)]
-pub struct ActionProgress(pub f32);
+#[derive(Debug, Default, Resource)]
+pub struct ActionProgress {
+    pub percent: f32,
+    time_seconds: f32,
+}
 
 impl ActionProgress {
     fn reset(&mut self) {
-        self.0 = 0.0;
+        self.percent = 0.0;
     }
 }
 
@@ -100,6 +116,10 @@ pub struct CurrentAction(pub Option<Action>);
 impl CurrentAction {
     fn set(&mut self, action: Action) {
         self.0 = Some(action)
+    }
+
+    fn reset(&mut self) {
+        self.0 = None;
     }
 }
 
@@ -122,6 +142,7 @@ impl Default for KnownActions {
         set.insert(Action::CreateFollowers);
         set.insert(Action::Hunt);
         set.insert(Action::RenderCarcass);
+        set.insert(Action::CookMeat);
 
         Self(set)
     }
@@ -154,10 +175,10 @@ fn progress_system(
         _ => return,
     };
 
-    **progress += time.delta().as_secs_f32() / 5.0;
+    progress.percent += time.delta().as_secs_f32() / progress.time_seconds;
 
-    if **progress >= 1.0 {
-        **progress -= 1.0;
+    if progress.percent >= 1.0 {
+        progress.percent -= 1.0;
         
         if !current_action.progresses() {
             return;
@@ -181,10 +202,17 @@ fn progress_system(
 
                         commands.trigger(LearnAction { action: Action::GatherWood });
                         commands.trigger(LearnAction { action: Action::GatherStone });
+                        commands.trigger(ResetPlayerAction);
                     },
                     _ => {}
                 }
             },
+
+            Action::CreateFollowers => {
+                stockyard[StockKind::Followers] += 1.0;
+                stockyard[StockKind::Godpower] -= 10.0;
+                commands.trigger(ResetPlayerAction);
+            }
             
             _ => {
                 panic!("Unhandled progressing action.")
@@ -274,83 +302,5 @@ fn affinity_check_system(
                 panic!("Affinity timer timed out for an action without affinity.");
             }
         }
-    }
-}
-
-#[derive(Debug, Event)]
-pub struct ChangeAction {
-    pub action: Action
-}
-
-impl ChangeAction {
-    pub fn new(action: Action) -> Self {
-        ChangeAction {
-            action
-        }
-    }
-}
-
-fn on_change_action(
-    event: On<ChangeAction>,
-
-    mut stockyard: ResMut<Stockyard>,
-    player_action_bonuses: Res<PlayerActionsStats>,
-
-    mut current_action: ResMut<CurrentAction>,
-    mut action_progress: ResMut<ActionProgress>,
-    mut action_affinity: ResMut<ActionAffinity>,
-    mut affinity_timer: ResMut<AffinityTimer>,
-) {
-    // Changing to current action. Disregard.
-    if Some(event.action) == current_action.0 {
-        return;
-    }
-
-    action_progress.reset();
-    action_affinity.reset();
-    affinity_timer.reset();
-    stockyard.reset_player_action_modifiers();
-
-    current_action.set(event.action);
-
-    match event.action {
-        Action::Explore => {},
-        Action::GatherWood => {
-            let stock = &mut stockyard[StockKind::Wood];
-            let bonuses = &player_action_bonuses.gather_wood;
-            stock.set_player_action_base_modifier(bonuses.base_gain_per_second);
-            stock.set_player_action_affinity_multiplier(bonuses.affinity.multiplier);
-            action_affinity.affinity = bonuses.affinity;
-            affinity_timer.unpause();
-        },
-        Action::GatherStone => {
-            let stock = &mut stockyard[StockKind::Stone];
-            let bonuses = &player_action_bonuses.gather_stone;
-            stock.set_player_action_base_modifier(bonuses.base_gain_per_second);
-            stock.set_player_action_affinity_multiplier(bonuses.affinity.multiplier);
-            action_affinity.affinity = bonuses.affinity;
-            affinity_timer.unpause();
-        },
-        Action::Hunt => {
-            let stock = &mut stockyard[StockKind::Carcass];
-            let bonuses = &player_action_bonuses.hunt;
-            stock.set_player_action_base_modifier(bonuses.base_gain_per_second);
-            stock.set_player_action_affinity_multiplier(bonuses.affinity.multiplier);
-            action_affinity.affinity = bonuses.affinity;
-            affinity_timer.unpause();
-        },
-        Action::RenderCarcass => {
-            let [
-                stock_carcass,
-                stock_meat,
-                stock_bones,
-            ] = stockyard.get_stocks_mut([&StockKind::Carcass, &StockKind::Meat, &StockKind::Bone]);
-
-            stock_carcass.set_player_action_base_modifier(-0.2);
-            stock_meat.set_player_action_base_modifier(0.2);
-            stock_bones.set_player_action_base_modifier(0.2 / 5.0);
-            stockyard.set_stop_player_action_when_empty(StockKind::Carcass);
-        },
-        Action::CreateFollowers => {},
     }
 }

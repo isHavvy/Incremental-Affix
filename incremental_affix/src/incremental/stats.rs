@@ -20,6 +20,7 @@ impl PlayerActionsStats {
             Action::GatherStone => Some(&self.gather_stone),
             Action::Hunt => Some(&self.hunt),
             Action::RenderCarcass => None,
+            Action::CookMeat => None,
             Action::CreateFollowers => None,
         }
     }

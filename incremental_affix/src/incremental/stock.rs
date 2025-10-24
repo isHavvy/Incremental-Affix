@@ -35,6 +35,7 @@ pub enum StockKind {
     Carcass,
     Meat,
     Bone,
+    Food,
 }
 
 impl StockKind {
@@ -47,6 +48,7 @@ impl StockKind {
         Self::Carcass,
         Self::Bone,
         Self::Meat,
+        Self::Food,
     ];
 }
 
@@ -61,6 +63,7 @@ impl ToString for StockKind {
             StockKind::Carcass => "Carcasses",
             StockKind::Meat => "Meat",
             StockKind::Bone => "Bones",
+            StockKind::Food => "Food",
         }.to_string()
     }
 }
@@ -192,7 +195,7 @@ impl Stock {
 
     pub fn reset_player_action_modifiers(&mut self) {
         self.player_action_active = true;
-        
+
         if self.player_action_base_modifier == 0.0 { return; }
 
         self.has_changed = true;
@@ -214,7 +217,7 @@ impl Stock {
 pub struct Stockyard {
     #[deref]
     stocks: HashMap<StockKind, Stock>,
-    stop_player_action_when_empty: Option<StockKind>,
+    stop_player_action_when_empty: Option<Vec<StockKind>>,
 }
 
 impl Stockyard {
@@ -230,7 +233,7 @@ impl Stockyard {
         self.stocks.get_many_mut(stocks).map(Option::unwrap)
     }
 
-    pub fn set_stop_player_action_when_empty(&mut self, stock_kind: StockKind) {
+    pub fn set_stop_player_action_when_empty(&mut self, stock_kind: Vec<StockKind>) {
         self.stop_player_action_when_empty = Some(stock_kind);
     }
 }
@@ -240,13 +243,14 @@ impl Default for Stockyard {
         let mut stocks = HashMap::new();
 
         stocks.insert(StockKind::BranchesAndPebbles, Stock::new(0.0, None));
-        stocks.insert(StockKind::Godpower, Stock::new(0.0, None));
+        stocks.insert(StockKind::Godpower, Stock::new(10.0, None));
         stocks.insert(StockKind::Followers, Stock::new(0.0, Some(10.0)));
         stocks.insert(StockKind::Wood, Stock::new(0.0, Some(100.0)));
         stocks.insert(StockKind::Stone, Stock::new(0.0, Some(100.0)));
         stocks.insert(StockKind::Carcass, Stock::new(0.0, Some(10.0)));
         stocks.insert(StockKind::Bone, Stock::new(0.0, Some(100.0)));
         stocks.insert(StockKind::Meat, Stock::new(0.0, Some(100.0)));
+        stocks.insert(StockKind::Food, Stock::new(0.0, Some(100.0)));
 
         Self {
             stocks,
@@ -275,8 +279,8 @@ fn tick_stockyard_system(
     mut stockyard: ResMut<Stockyard>
 ) {
     // This whole block is so badly written.
-    if let Some(stock_kind) = stockyard.stop_player_action_when_empty {
-        let player_action_active = stockyard[stock_kind] != 0.0;
+    if let Some(ref stock_kind) = stockyard.stop_player_action_when_empty {
+        let player_action_active = stock_kind.iter().copied().all(|stock_kind| stockyard[stock_kind] != 0.0);
         for stock in &mut stockyard.values_mut() {
             stock.player_action_active = player_action_active;
         }

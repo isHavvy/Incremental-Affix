@@ -200,7 +200,7 @@ fn update_action_bar_progress_bar(
 ) {
     let progress_bar = progress_bar.progress_bar;
     let mut node = node_query.get_mut(progress_bar).expect("Progress bar entity must have a Node component.");
-    node.width = ACTION_BAR_WIDTH * progress.0;
+    node.width = ACTION_BAR_WIDTH * progress.percent;
 }
 
 fn on_current_action_change_system(
