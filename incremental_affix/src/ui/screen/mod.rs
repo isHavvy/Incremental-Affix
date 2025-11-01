@@ -6,6 +6,7 @@ use crate::incremental::action::KnownActions;
 pub mod action;
 pub mod craft;
 pub mod inventory;
+pub mod population;
 
 /// Kinds of screens in the game
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
@@ -53,7 +54,7 @@ pub fn spawn_screens_ui(
 
     let screen_container = commands.spawn((
         Node {
-            flex_grow: 1.,
+            flex_grow: 1.0,
             overflow: Overflow::scroll_y(),
 
             padding: UiRect { left: px(10), right: px(0), top: px(10), bottom: px(0) },
@@ -72,23 +73,7 @@ pub fn spawn_screens_ui(
     );
     craft::spawn_crafting_screen(commands.reborrow(), screen_container);
     inventory::spawn_inventory_screen(commands.reborrow(), screen_container);
-    spawn_population_screen(commands.reborrow(), screen_container);
-}
-
-fn spawn_population_screen(mut commands: Commands, screen_container: Entity) {
-    commands.spawn((
-        Node {
-            display: Display::None,
-
-            flex_direction: FlexDirection::Column,
-            flex_grow: 1.,
-
-            //height: percent(100.0),
-            ..default()
-        },
-        Screen::Population,
-        ChildOf(screen_container),
-    ));
+    population::spawn_population_screen(commands.reborrow(), screen_container);
 }
 
 /// The screens bar is the bar of buttons that allows changing the active screen.

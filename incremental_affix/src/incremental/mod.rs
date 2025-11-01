@@ -55,3 +55,40 @@ impl DerefMut for TickTimer {
         &mut self.0
     }
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Default, Deref, DerefMut)]
+pub struct PerSecond(f64);
+
+pub trait DotPerSecond {
+    fn per_second(self) -> PerSecond;
+}
+
+impl<T> DotPerSecond for T where T: Into<PerSecond> {
+    fn per_second(self) -> PerSecond {
+        self.into()
+    }
+}
+
+impl From<i32> for PerSecond {
+    fn from(value: i32) -> Self {
+        Self(value as _)
+    }
+}
+
+impl From<f32> for PerSecond {
+    fn from(value: f32) -> Self {
+        Self(value as _)
+    }
+}
+
+impl From<f64> for PerSecond {
+    fn from(value: f64) -> Self {
+        Self(value)
+    }
+}
+
+impl PerSecond {
+    pub fn per_tick(&self) -> f64 {
+        self.0 / IncrementalPlugin::TICKS_PER_SECOND as f64
+    }
+}

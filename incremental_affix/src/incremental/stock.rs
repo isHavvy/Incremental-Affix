@@ -10,6 +10,9 @@ use bevy::prelude::*;
 use bevy::platform::collections::HashMap;
 
 use crate::incremental::{IncrementalPlugin, TickTimer};
+use crate::incremental::stock::producer_consumer::{consume_modifiers, init_follower_stockyard_producer_consumer, produce_modifiers, update_follower_modifier, StockSystems, StockyardConsumption};
+
+pub mod producer_consumer;
 
 pub struct StockPlugin;
 
@@ -17,7 +20,12 @@ impl Plugin for StockPlugin {
     fn build(&self, app: &mut App) {
         app
         .init_resource::<Stockyard>()
+        .init_resource::<StockyardConsumption>()
+        .add_systems(Startup, init_follower_stockyard_producer_consumer)
         .add_systems(FixedUpdate, tick_stockyard_system)
+        .add_systems(FixedUpdate, consume_modifiers.in_set(StockSystems::Consume))
+        .add_systems(FixedUpdate, update_follower_modifier.in_set(StockSystems::PostStockConsume).after(StockSystems::Consume))
+        .add_systems(FixedUpdate, produce_modifiers.in_set(StockSystems::Produce).after(StockSystems::PostStockConsume))
         ;
     }
 }
@@ -100,6 +108,23 @@ impl Stock {
             player_action_active: true,
 
             has_changed: true,
+        }
+    }
+    
+    /// Try to consume the amount of stock.
+    /// If there's not enough stock, it will instead consume all of it.
+    /// 
+    /// Returned value is the percentage of stock consumed.
+    /// `1.0` if the total amount is consumed.
+    /// `0.0` if the stock is empty and the amount is non-zero. 
+    fn consume_check(&self, amount: f64) -> f64 {
+        if amount <= self.current {
+            1.0
+        } else {
+            // This cannot divide by zero since if `amount` is zero,
+            // it would be less than or equal to `self.current` and
+            // this else block would not be taken.
+            self.current / amount
         }
     }
 }
@@ -267,16 +292,30 @@ impl Index<StockKind> for Stockyard {
     }
 }
 
+impl Index<&StockKind> for Stockyard {
+    type Output = Stock;
+
+    fn index(&self, index: &StockKind) -> &Self::Output {
+        &self.stocks[index]
+    }
+}
+
 impl IndexMut<StockKind> for Stockyard {
     fn index_mut(&mut self, index: StockKind) -> &mut Self::Output {
         self.stocks.get_mut(&index).expect("The Stockyard stocks map should contain values for each StockKind.")
     }
 }
 
+impl IndexMut<&StockKind> for Stockyard {
+    fn index_mut(&mut self, index: &StockKind) -> &mut Self::Output {
+        self.stocks.get_mut(index).expect("The Stockyard stocks map should contain values for each StockKind.")
+    }
+}
+
 fn tick_stockyard_system(
     time: Res<Time>,
     mut tick_timer: ResMut<TickTimer>,
-    mut stockyard: ResMut<Stockyard>
+    mut stockyard: ResMut<Stockyard>,
 ) {
     // This whole block is so badly written.
     if let Some(ref stock_kind) = stockyard.stop_player_action_when_empty {
