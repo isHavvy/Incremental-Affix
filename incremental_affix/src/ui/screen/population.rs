@@ -1,32 +1,9 @@
 use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
-use bevy::ui_widgets::Button;
+use bevy::ui_widgets::{Activate, Button};
 
+use crate::incremental::job::{AssignFollower, JobKind};
 use crate::ui::screen::Screen;
-
-// #[TODO(Havvy)]: This enum should be incremental.
-#[derive(Debug, Clone, Copy, Component)]
-enum Job {
-    ChopWood,
-    Hunt,
-    RenderCarcass,
-    Cook,
-}
-
-impl Job {
-    pub const LIST: &[Self] = &[Self::ChopWood, Self::Hunt, Self::RenderCarcass, Self::Cook];
-}
-
-impl ToString for Job {
-    fn to_string(&self) -> String {
-        match *self {
-            Job::ChopWood => "Chop Wood".to_string(),
-            Job::Hunt => "Hunt".to_string(),
-            Job::RenderCarcass => "Render Carcasses".to_string(),
-            Job::Cook => "Cook".to_string(),
-        }
-    }
-}
 
 pub fn spawn_population_screen(mut commands: Commands, screen_container: Entity) {
     let screen = commands.spawn((
@@ -43,12 +20,12 @@ pub fn spawn_population_screen(mut commands: Commands, screen_container: Entity)
         ChildOf(screen_container),
     )).id();
 
-    Job::LIST.iter().copied().for_each(|job| spawn_job_row(commands.reborrow(), job, screen))
+    JobKind::LIST.iter().copied().for_each(|job| spawn_job_row(commands.reborrow(), job, screen))
 }
 
 fn spawn_job_row(
     mut commands: Commands,
-    job: Job,
+    job_kind: JobKind,
     parent: Entity,
 ) {
     let job_row = commands.spawn((
@@ -58,12 +35,12 @@ fn spawn_job_row(
             ..default()
         },
 
-        job,
+        job_kind,
         
         ChildOf(parent),
     )).id();
 
-    if matches!(job, Job::RenderCarcass) {
+    if matches!(job_kind, JobKind::RenderCarcass) {
         commands.entity(job_row).insert(Disabled);
     }
 
@@ -83,7 +60,7 @@ fn spawn_job_row(
             margin: px(4).right(),
             ..default()
         },
-        Text::new(job.to_string()),
+        Text::new(job_kind.to_string()),
         TextColor::BLACK,
 
         ChildOf(job_row),
@@ -126,4 +103,20 @@ fn spawn_job_row(
         ChildOf(job_row),
     ));
 
+}
+
+fn on_plus_activate(
+    event: On<Activate>,
+
+    mut commands: Commands,
+
+    parent_query: Query<&ChildOf>,
+    job_kind_query: Query<&JobKind, With<Node>>
+) {
+    let job_row = parent_query.get(event.entity).unwrap().0;
+    let job_kind = job_kind_query.get(job_row).unwrap().clone();
+
+    commands.trigger(AssignFollower {
+        job_kind,
+    });
 }

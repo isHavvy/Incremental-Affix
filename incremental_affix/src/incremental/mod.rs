@@ -10,6 +10,7 @@ pub mod stats;
 pub mod item;
 pub mod stock;
 pub mod affinity;
+pub mod job;
 
 pub struct IncrementalPlugin;
 
@@ -29,6 +30,7 @@ impl Plugin for IncrementalPlugin {
             action::ActionPlugin,
             stock::StockPlugin,
             item::ItemPlugin,
+            job::JobsPlugin,
         ))
 
         ;

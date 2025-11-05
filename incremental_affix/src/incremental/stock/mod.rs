@@ -149,6 +149,18 @@ impl PartialOrd<f64> for Stock {
     }
 }
 
+impl PartialEq<u32> for Stock {
+    fn eq(&self, value: &u32) -> bool {
+        self.current.eq(&(*value as f64))
+    }
+}
+
+impl PartialOrd<u32> for Stock {
+    fn partial_cmp(&self, value: &u32) -> Option<std::cmp::Ordering> {
+        self.current.partial_cmp(&(*value as f64))
+    }
+}
+
 /// Reading stock values to strings.
 impl Stock {
     /// Push to a string the amount of stock is held and the maximum.
