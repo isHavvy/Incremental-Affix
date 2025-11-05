@@ -16,7 +16,7 @@ pub struct InventoryScreen(Entity);
 
 impl InventoryScreen {
     pub fn get(&self) -> Entity {
-        self.0.clone()
+        self.0
     }
 }
 
@@ -96,7 +96,7 @@ fn spawn_slot(mut commands: Commands, parent: Entity, slot_tag: ItemSlotTag) -> 
         ChildOf(container),
     ));
 
-    return container;
+    container
 }
 
 pub fn on_item_craft(
@@ -108,7 +108,7 @@ pub fn on_item_craft(
     item_query: Query<&AffixiveItem>,
 ) {
     let item = item_query.get(event.crafted_item).unwrap();
-    spawn_inventory_item(commands.reborrow(), &*inventory_screen, event.crafted_item, item.name().to_string());
+    spawn_inventory_item(commands.reborrow(), &inventory_screen, event.crafted_item, item.name().to_string());
 }
 
 pub fn spawn_inventory_item(
@@ -205,7 +205,7 @@ fn on_activate_button_equip(
         return;
     }
 
-    let previous_item = std::mem::replace(&mut item_slot.item, Some(corresponding_item));
+    let previous_item = item_slot.item.replace(corresponding_item);
 
     if let Some(previous_item_entity) = previous_item {
         let previous_item = item_query.get(previous_item_entity)
@@ -213,7 +213,7 @@ fn on_activate_button_equip(
 
         let name = previous_item.name().to_string();
 
-        spawn_inventory_item(commands.reborrow(), &*inventory_screen, previous_item_entity, name.to_string());
+        spawn_inventory_item(commands.reborrow(), &inventory_screen, previous_item_entity, name.to_string());
     }
     commands.entity(item_node).despawn();
 

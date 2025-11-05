@@ -17,15 +17,15 @@ pub enum Base {
     WoodenHunt,
 }
 
-impl ToString for Base {
-    fn to_string(&self) -> String {
-        match self {
-            Base::MakeshiftTools => "Makeshift Tools".to_string(),
-            Base::TestTools => "Test Tools".to_string(),
-            Base::StoneTools => "Stone Tools".to_string(),
+impl std::fmt::Display for Base {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Base::MakeshiftTools => "Makeshift Tools",
+            Base::TestTools => "Test Tools",
+            Base::StoneTools => "Stone Tools",
 
-            Base::WoodenHunt => "Wooden Hunting Weapon".to_string(),
-        }
+            Base::WoodenHunt => "Wooden Hunting Weapon",
+        })
     }
 }
 
@@ -75,5 +75,5 @@ pub fn initialize() -> HashMap<Base, AffixiveItemBase> {
         ]
     });
 
-    return map;
+    map
 }

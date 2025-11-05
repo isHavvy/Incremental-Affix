@@ -31,15 +31,15 @@ impl JobKind {
     pub const LIST: &[Self] = &[Self::ChopWood, Self::Hunt, Self::RenderCarcass, Self::Cook];
 }
 
-impl ToString for JobKind {
-    fn to_string(&self) -> String {
-        match *self {
-            JobKind::ChopWood => "Chop Wood".to_string(),
-            JobKind::Hunt => "Hunt".to_string(),
-            JobKind::RenderCarcass => "Render Carcasses".to_string(),
-            JobKind::Cook => "Cook".to_string(),
-        }
-    }
+impl std::fmt::Display for JobKind {    
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match *self {
+            JobKind::ChopWood => "Chop Wood",
+            JobKind::Hunt => "Hunt",
+            JobKind::RenderCarcass => "Render Carcasses",
+            JobKind::Cook => "Cook",
+        })
+    }    
 }
 
 #[derive(Debug, Component)]

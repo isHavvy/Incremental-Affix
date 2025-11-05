@@ -68,25 +68,21 @@ impl ItemDatabase {
     /// Try to push a random prefix that can be put onto the item onto it.
     pub fn try_push_random_prefix(&self, item: &mut AffixiveItem) -> Result<(), PushAffixError> {
         let mut rng = rand::rng();
-        let table = self.prefix_table(&item);
+        let table = self.prefix_table(item);
         let index = rng.random_range(table.clone());
         let mut prefix = self.prefixes[index].clone();
         prefix.randomize_actual();
-        let res = item.try_push_prefix(prefix);
-
-        res
+        item.try_push_prefix(prefix)
     }
 
     /// Try to push a random suffix that can be put onto the item onto it.
     pub fn try_push_random_suffix(&self, item: &mut AffixiveItem) -> Result<(), PushAffixError> {
         let mut rng = rand::rng();
-        let table = self.suffix_table(&item);
+        let table = self.suffix_table(item);
         let index = rng.random_range(table.clone());
         let mut suffix = self.suffixes[index].clone();
         suffix.randomize_actual();
-        let res = item.try_push_suffix(suffix);
-
-        res
+        item.try_push_suffix(suffix)
     }
 }
 

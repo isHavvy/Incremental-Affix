@@ -21,14 +21,14 @@ impl Screen {
     pub const LIST: &[Self] = &[Self::Act, Self::Population, Self::Inventory, Self::Craft];
 }
 
-impl ToString for Screen {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Act => "Act".into(),
-            Self::Population => "Population".into(),
-            Self::Inventory => "Inventory".into(),
-            Self::Craft => "Craft".into(),
-        }
+impl std::fmt::Display for Screen {    
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Act => "Act",
+            Self::Population => "Population",
+            Self::Inventory => "Inventory",
+            Self::Craft => "Craft",
+        })
     }
 }
 
@@ -48,7 +48,7 @@ pub fn spawn_screens_ui(
 
             ..default()
         },
-        BackgroundColor(Color::srgb(0.0, 0.8, 0.0).into()),
+        BackgroundColor(Color::srgb(0.0, 0.8, 0.0)),
         ChildOf(parent_ui_node)
     )).id();
 

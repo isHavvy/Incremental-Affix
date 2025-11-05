@@ -128,7 +128,7 @@ fn handle_craft_button_hover(
     db: Res<ItemDatabase>,
     base_query: Query<&Base>,
 ) {
-    let base = base_query.get(event.entity).expect("This handler can only be on an entity with an item base.").clone();
+    let base = *base_query.get(event.entity).expect("This handler can only be on an entity with an item base.");
     let tooltip_content = spawn_item_details(commands.reborrow(), &db.create_basic(base));
     commands.trigger(tooltip::ShowTooltip { content: tooltip_content });
 }

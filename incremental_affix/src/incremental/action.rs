@@ -66,23 +66,12 @@ impl Action {
     ];
 
     pub const fn progresses(&self) -> bool {
-        match self {
-            Action::Explore => true,
-            Action::CreateFollowers => true,
-            _ => false,
-        }
+        matches!(self, Action::Explore | Action::CreateFollowers)
     }
 
     /// If the action passively increases a stock.
     pub const fn is_passive(self) -> bool {
-        match self {
-            | Action::GatherWood
-            | Action::GatherStone
-            | Action::Hunt
-            => true,
-
-            _ => false,
-        }
+        matches!(self, Action::GatherWood | Action::GatherStone | Action::Hunt)
     }
 
     pub fn progress_time(self) -> f32 {

@@ -60,9 +60,9 @@ impl StockKind {
     ];
 }
 
-impl ToString for StockKind {
-    fn to_string(&self) -> String {
-        match self {
+impl std::fmt::Display for StockKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
             StockKind::BranchesAndPebbles => "Branches and Pebbles",
             StockKind::Godpower => "Godpower",
             StockKind::Followers => "Followers",
@@ -72,7 +72,7 @@ impl ToString for StockKind {
             StockKind::Meat => "Meat",
             StockKind::Bone => "Bones",
             StockKind::Food => "Food",
-        }.to_string()
+        })
     }
 }
 
@@ -189,7 +189,7 @@ impl Stock {
 /// Modifying formula values for automatic stock updating per tick.
 impl Stock {
     pub fn get_change_per_tick(&self) -> f64 {
-        return 0.0;
+        0.0
     }
 }
 

@@ -35,7 +35,7 @@ fn setup(
 ) {
     let font = asset_server.load::<Font>("fonts/FiraSans-Bold.ttf");
 
-    commands.spawn(Camera2d::default());
+    commands.spawn(Camera2d);
 
     let root_node = commands.spawn((
         Node {

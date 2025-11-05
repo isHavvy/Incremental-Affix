@@ -12,11 +12,11 @@ pub enum ItemSlotTag {
     Hunt,
 }
 
-impl ToString for ItemSlotTag {
-    fn to_string(&self) -> String {
-        match *self {
-            ItemSlotTag::Tool => "Tools".into(),
-            ItemSlotTag::Hunt => "Hunting Gear".into(),
-        }
+impl std::fmt::Display for ItemSlotTag {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match *self {
+            ItemSlotTag::Tool => "Tools",
+            ItemSlotTag::Hunt => "Hunting Gear",
+        })
     }
 }

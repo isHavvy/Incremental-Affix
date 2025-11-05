@@ -1,4 +1,5 @@
 use bevy::ecs::entity_disabling::Disabled;
+use bevy::ecs::system::entity_command::observe;
 use bevy::prelude::*;
 use bevy::ui_widgets::{Activate, Button};
 
@@ -94,7 +95,7 @@ fn spawn_job_row(
         BorderColor::all(Color::BLACK),
 
         Button,
-        // Activate Observer.
+        // observe(handle_plus_activate),
 
         children![(
             Text::new("+"),
@@ -105,7 +106,7 @@ fn spawn_job_row(
 
 }
 
-fn on_plus_activate(
+fn handle_plus_activate(
     event: On<Activate>,
 
     mut commands: Commands,
@@ -114,7 +115,7 @@ fn on_plus_activate(
     job_kind_query: Query<&JobKind, With<Node>>
 ) {
     let job_row = parent_query.get(event.entity).unwrap().0;
-    let job_kind = job_kind_query.get(job_row).unwrap().clone();
+    let job_kind = *job_kind_query.get(job_row).unwrap();
 
     commands.trigger(AssignFollower {
         job_kind,

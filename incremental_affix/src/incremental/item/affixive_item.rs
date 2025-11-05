@@ -198,7 +198,7 @@ impl AffixiveItem {
 
     pub fn modifiers(&self) -> impl Iterator<Item=(&Modifier, ModifierValue)> {
         self.implicits.iter().map(|implicit| &**implicit)
-        .chain({ let x = self.prefixes.iter().map(|prefix| &**prefix); x })
+        .chain(self.prefixes.iter().map(|prefix| &**prefix))
         .chain(self.suffixes.iter().map(|suffix| &**suffix))
         .flat_map(|affix| affix.modifiers())
     }

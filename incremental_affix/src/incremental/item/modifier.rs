@@ -67,7 +67,8 @@ impl Affix {
         [
             Some((&self.modifier, self.modifier_actual)),
             (self.hybrid_modifier.as_ref().map(|hybrid| (hybrid, self.hybrid_modifier_actual)))
-        ].into_iter().filter_map(|x| x) }
+        ].into_iter().flatten()
+    }
 }
 
 #[derive(Debug, Clone)]

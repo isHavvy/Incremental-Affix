@@ -36,7 +36,7 @@ pub(in super) fn on_change_action(
         return;
     }
 
-    reset_player_action(&mut *action_progress, &mut *action_affinity, &mut *affinity_timer, &mut *current_action, &mut spc);
+    reset_player_action(&mut action_progress, &mut action_affinity, &mut affinity_timer, &mut current_action, &mut spc);
 
     current_action.set(event.action);
     action_progress.time_seconds = event.action.progress_time();
@@ -89,7 +89,7 @@ pub fn on_reset_player_action(
     mut current_action: ResMut<CurrentAction>,
     mut action_spc: Single<&mut PlayerActionSpc>,
 ) {
-    reset_player_action(&mut *action_progress, &mut *action_affinity, &mut *affinity_timer, &mut *current_action, &mut *action_spc);
+    reset_player_action(&mut action_progress, &mut action_affinity, &mut affinity_timer, &mut current_action, &mut action_spc);
 }
 
 fn reset_player_action(

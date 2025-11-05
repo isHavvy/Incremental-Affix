@@ -27,7 +27,7 @@ struct LogUi(Entity);
 
 impl LogUi {
     fn entity(&self) -> Entity {
-        self.0.clone()
+        self.0
     }
 }
 

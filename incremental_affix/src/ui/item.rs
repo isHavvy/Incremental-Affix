@@ -109,7 +109,7 @@ pub fn spawn_item_details(
         }
     }
 
-    for tag in item.tags.iter().copied() {
+    for tag in item.tags.iter() {
         commands.spawn((
             Node {
                 ..default()
