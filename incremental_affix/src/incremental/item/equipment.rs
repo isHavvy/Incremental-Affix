@@ -6,6 +6,7 @@ use crate::incremental::affinity::Affinity;
 use crate::incremental::item::item_slot::ItemSlot;
 use crate::incremental::item::{affixive_item::AffixiveItem, modifier::ModifierKind};
 use crate::incremental::stats::PlayerActionsStats;
+use crate::incremental::DotPerSecond;
 use crate::stats_builder::StatsBuilder;
 
 #[derive(Debug, EntityEvent)]
@@ -87,19 +88,19 @@ pub fn on_equip(
         }
     }
 
-    player_actions_stats.gather_wood.base_gain_per_second = base_wood.calculate();
+    player_actions_stats.gather_wood.base_gain_per_second = base_wood.calculate().per_second();
     player_actions_stats.gather_wood.affinity = Affinity {
         chance: wood_affinity_chance.calculate(),
         multiplier: wood_affinity_multiplier.calculate(),
         time: Duration::from_secs_f64(wood_affinity_time.calculate()),
     };
 
-    player_actions_stats.gather_stone.base_gain_per_second = base_stone.calculate();
+    player_actions_stats.gather_stone.base_gain_per_second = base_stone.calculate().per_second();
     player_actions_stats.gather_stone.affinity = Affinity {
         chance: stone_affinity_chance.calculate(),
         multiplier: stone_affinity_multiplier.calculate(),
         time: Duration::from_secs_f64(stone_affinity_time.calculate()),
     };
 
-    player_actions_stats.hunt.base_gain_per_second = base_hunt.calculate();
+    player_actions_stats.hunt.base_gain_per_second = base_hunt.calculate().per_second();
 }

@@ -5,16 +5,19 @@ use bevy::prelude::*;
 use bevy::platform::collections::HashSet;
 
 use crate::incremental::action::change::ResetPlayerAction;
+use crate::incremental::action::spc::PlayerActionSpc;
 use crate::incremental::affinity::Affinity;
 use crate::incremental::ExplorationProgress;
+use crate::incremental::stock::producer_consumer::StockSystems;
 use crate::ui::log::LogMessage;
-use crate::incremental::stock::{StockKind, Stockyard};
+use crate::incremental::stock::{StockKind, stockyard::Stockyard};
 
 pub use change::ChangeAction;
 
 pub const NO_CURRENT_ACTION_DISPLAY: &str = "Doing Nothing";
 
 mod change;
+mod spc;
 
 pub struct ActionPlugin;
 
@@ -29,7 +32,10 @@ impl Plugin for ActionPlugin {
         .add_observer(on_learn_action)
         .add_observer(change::on_change_action)
         .add_observer(change::on_reset_player_action)
+        .add_systems(Startup, spc::initialize_action_spc)
         .add_systems(FixedUpdate, (progress_system, affinity_check_system))
+        .add_systems(FixedUpdate, spc::preconsume.in_set(StockSystems::PreConsume))
+        .add_systems(FixedUpdate, spc::postconsume.in_set(StockSystems::PostConsume))
         ;
     }
 }
@@ -262,7 +268,8 @@ fn affinity_check_system(
 
     mut affinity_check_timer: ResMut<AffinityTimer>,
     mut action_affinity: ResMut<ActionAffinity>,
-    mut stockyard: ResMut<Stockyard>,
+
+    mut spc: Single<&mut PlayerActionSpc>,
 ) {
     let Some(current_action) = **current_action else { return; };
 
@@ -271,36 +278,12 @@ fn affinity_check_system(
     }
 
     if affinity_check_timer.tick(time.delta()).just_finished() && action_affinity.affinity.check() {
-        match current_action {
-            Action::GatherWood => {
-                stockyard[StockKind::Wood].set_player_action_has_affinity(true);
-                action_affinity.timer = Some(Timer::new(action_affinity.affinity.time, TimerMode::Once));
-            },
-            Action::GatherStone => {
-                stockyard[StockKind::Stone].set_player_action_has_affinity(true);
-                action_affinity.timer = Some(Timer::new(action_affinity.affinity.time, TimerMode::Once));
-            },
-
-            _ => {
-                panic!("Affinity occurred detected for an action without affinity.");
-            }
-        }
+        spc.enable_affinity();
+        action_affinity.timer = Some(Timer::new(action_affinity.affinity.time, TimerMode::Once));
     }
 
     if let Some(timer) = &mut action_affinity.timer && timer.tick(time.delta()).just_finished() {
-        match current_action {
-            Action::GatherWood => {
-                stockyard[StockKind::Wood].set_player_action_has_affinity(false);
-                action_affinity.timer = None;
-            },
-            Action::GatherStone => {
-                stockyard[StockKind::Stone].set_player_action_has_affinity(false);
-                action_affinity.timer = None;
-            },
-
-            _ => {
-                panic!("Affinity timer timed out for an action without affinity.");
-            }
-        }
+        spc.disable_affinity();
+        action_affinity.timer = None;
     }
 }

@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Activate, Button};
 
 use crate::incremental::item::{base::Base, item_database::ItemDatabase, Crafted};
-use crate::incremental::stock::{StockKind, Stockyard};
+use crate::incremental::stock::{StockKind, stockyard::Stockyard};
 use crate::ui::{item::spawn_item_details, log::LogMessage, tooltip};
 use super::Screen;
 

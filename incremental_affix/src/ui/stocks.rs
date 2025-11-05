@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::incremental::stock::{StockKind, Stockyard};
+use crate::incremental::stock::{StockKind, stockyard::Stockyard};
 
 pub fn spawn_stocks_ui(commands: &mut Commands, sidebar: Entity, font: Handle<Font>) {
     commands.spawn((

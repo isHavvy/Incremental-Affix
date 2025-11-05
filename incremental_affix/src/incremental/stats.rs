@@ -2,7 +2,7 @@
 
 use bevy::prelude::*;
 
-use crate::incremental::{action::Action, affinity::Affinity};
+use crate::incremental::{action::Action, affinity::Affinity, DotPerSecond, PerSecond};
 
 /// Stats for all player actions
 #[derive(Debug, Resource, Default)]
@@ -29,12 +29,12 @@ impl PlayerActionsStats {
 /// Stats for a specific action
 #[derive(Debug, Default)]
 pub struct PlayerActionStats {
-    pub base_gain_per_second: f64,
+    pub base_gain_per_second: PerSecond,
     pub affinity: Affinity,
 }
 
 impl PlayerActionStats {
     pub fn has_base_gain(&self) -> bool {
-        self.base_gain_per_second != 0.0
+        self.base_gain_per_second != 0.per_second()
     }
 }

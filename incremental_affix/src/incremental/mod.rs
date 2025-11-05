@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::{Deref, DerefMut, Mul, Neg};
 
 use bevy::prelude::*;
 
@@ -58,6 +58,22 @@ impl DerefMut for TickTimer {
 
 #[derive(Debug, Clone, Copy, PartialEq, Default, Deref, DerefMut)]
 pub struct PerSecond(f64);
+
+impl Mul<f64> for PerSecond {
+    type Output = PerSecond;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        (self.0 * rhs).per_second()
+    }
+}
+
+impl Neg for PerSecond {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        self * -1.0
+    }
+}
 
 pub trait DotPerSecond {
     fn per_second(self) -> PerSecond;

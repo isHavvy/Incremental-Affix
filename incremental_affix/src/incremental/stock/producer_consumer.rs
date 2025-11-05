@@ -4,20 +4,18 @@ use bevy::platform::collections::HashMap;
 use crate::incremental::stock::{StockKind, Stockyard};
 use crate::incremental::{DotPerSecond as _, PerSecond};
 
+// #[TODO(Havvy)]: Make sure these systems happen in this order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
-#[expect(unused)]
 pub enum StockSystems {
-    PreStockConsume,
+    PreConsume,
     Consume,
-    PostStockConsume,
+    PostConsume,
     Produce,
 }
 
-/// How much an effect modifies the stocks in the stockyard.
-/// 
-/// Each tick, the `consumes`
+/// An effect that consumes or produces stocks over time.
 #[derive(Debug, Component)]
-pub struct StockProducerConsumer {
+pub struct StockyardProducerConsumer {
     pub consumes: Vec<(StockKind, PerSecond)>,
 
     /// Percent between 0.0 and 1.0 of how much of the stocks consumed exist.
@@ -29,7 +27,7 @@ pub struct StockProducerConsumer {
     pub produces: Vec<(StockKind, PerSecond)>,
 }
 
-impl Default for StockProducerConsumer {
+impl Default for StockyardProducerConsumer {
     fn default() -> Self {
         Self {
             consumes: vec![],
@@ -39,8 +37,12 @@ impl Default for StockProducerConsumer {
     }
 }
 
-#[derive(Debug, Resource, Default, Deref, DerefMut)]
-pub struct StockyardConsumption(HashMap<StockKind, f64>);
+impl StockyardProducerConsumer {
+    /// The percentage of the consumption that was fulfilled during the consume 
+    pub fn consumption_fullfilled(&self) -> f64 {
+        self.consumption_fullfilled
+    }
+}
 
 // This algorithm consumes conservatively. It's possible that a modifier
 // consuming multiple kinds could starve another modifier even if
@@ -56,9 +58,9 @@ pub struct StockyardConsumption(HashMap<StockKind, f64>);
 // A afterwards will have 5.
 pub fn consume_modifiers(
     mut stockyard: ResMut<Stockyard>,
-    mut consumption_table: ResMut<StockyardConsumption>,
+    mut consumption_table: Local<HashMap<StockKind, f64>>,
 
-    mut modifier_query: Query<&mut StockProducerConsumer>,
+    mut modifier_query: Query<&mut StockyardProducerConsumer>,
 ) {
     // Reset the table instead of allocating a new one every tick.
     for value in consumption_table.values_mut() {
@@ -93,24 +95,24 @@ pub fn consume_modifiers(
 pub fn produce_modifiers (
     mut stockyard: ResMut<Stockyard>,
 
-    pc_query: Query<&mut StockProducerConsumer>,
+    pc_query: Query<&mut StockyardProducerConsumer>,
 ) {
     for (stock_kind, production) in pc_query.iter().flat_map(|pc| pc.produces.iter()) {
         stockyard[stock_kind] += production.per_tick();
     }
 }
 
-/// Marker component for the follower modifier.
+/// Marker component for the follower Stockyard Producer Consumer entity.
 /// 
 /// Only one entity should be tagged with this component,
 /// and said entity must have a StockModifier component.
 #[derive(Debug, Component)]
-pub struct FollowerModifier;
+pub struct FollowerSpc;
 
 pub fn update_follower_modifier(
     stockyard: Res<Stockyard>,
 
-    mut modifier: Single<&mut StockProducerConsumer, With<FollowerModifier>>,
+    mut modifier: Single<&mut StockyardProducerConsumer, With<FollowerSpc>>,
 ) {
     let followers = stockyard[StockKind::Followers].current;
 
@@ -130,27 +132,11 @@ pub fn init_follower_stockyard_producer_consumer(
     mut commands: Commands,
 ) {
     commands.spawn((
-        FollowerModifier,
-        StockProducerConsumer {
+        FollowerSpc,
+        StockyardProducerConsumer {
             consumes: vec![(StockKind::Food, Default::default())],
             consumption_fullfilled: 1.0,
             produces: vec![(StockKind::Godpower, Default::default())],
         }
     ));
-}
-
-// #TODO(Havvy): This should be in action/stock_modifier.rs
-pub struct PlayerActionModifier {
-    has_affinity: bool,
-    affinity_multiplier: f64,
-    base_changes: Vec<(StockKind, f64)>,
-}
-
-#[expect(unused)]
-fn changes_per_second(player_action_modifier: &PlayerActionModifier) -> Vec<(StockKind, f64)> {
-    if player_action_modifier.has_affinity {
-        player_action_modifier.base_changes.iter().copied().map(|(sk, base_change)| (sk, base_change * player_action_modifier.affinity_multiplier)).collect()
-    } else {
-        player_action_modifier.base_changes.clone()
-    }
 }
