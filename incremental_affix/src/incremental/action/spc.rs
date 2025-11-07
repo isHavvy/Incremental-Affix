@@ -2,14 +2,15 @@
 
 use bevy::prelude::*;
 
-use crate::incremental::{stock::{producer_consumer::StockyardProducerConsumer, StockKind}, PerSecond};
+use crate::incremental::stock::{producer_consumer::StockyardProducerConsumer, StockKind, StockPerSecond};
+use crate::incremental::PerSecond;
 
 /// The Stockyard Producer/Consumer for the player's action
 #[derive(Debug, Component)]
 pub(super) struct PlayerActionSpc {
     has_affinity: bool,
     affinity_multiplier: f64,
-    base_changes: Vec<(StockKind, PerSecond)>,
+    base_changes: Vec<StockPerSecond>,
 }
 
 impl Default for PlayerActionSpc {
@@ -30,7 +31,7 @@ impl PlayerActionSpc {
     }
 
     pub fn push_change(&mut self, stock_kind: StockKind, change: PerSecond) {
-        self.base_changes.push((stock_kind, change));
+        self.base_changes.push(StockPerSecond::new(stock_kind, change));
     }
 
     pub fn set_affinity_multiplier(&mut self, affinity: f64) {
@@ -71,9 +72,9 @@ pub(super) fn preconsume(
     spc.consumes.extend(
         action_spc.base_changes
         .iter().copied()
-        .filter(|&(_sk, ps)| ps.is_sign_negative())
-        .map(|(sk, ps)| (sk, -ps))
-        .map(|(sk, ps)| (sk, ps * action_spc.affinity_multiplier()))
+        .filter(StockPerSecond::is_sign_negative)
+        .map(StockPerSecond::negate)
+        .map(|sps| StockPerSecond::new(sps.kind, sps.per_second * action_spc.affinity_multiplier()))
     );
 }
 
@@ -87,15 +88,21 @@ pub(super) fn postconsume(
     spc.produces.extend(
         action_spc.base_changes
         .iter().copied()
-        .filter(|&(_sk, ps)| ps.is_sign_positive())
-        .map(|(sk, ps)| (sk, ps * consumption_fullfilled * action_spc.affinity_multiplier()))
+        .filter(StockPerSecond::is_sign_positive)
+        .map(|sps| StockPerSecond::new(
+            sps.kind,
+            sps.per_second * consumption_fullfilled * action_spc.affinity_multiplier()
+        ))
     )
 }
 
 #[expect(unused)]
-fn changes_per_second(player_action_modifier: &PlayerActionSpc) -> Vec<(StockKind, PerSecond)> {
+fn changes_per_second(player_action_modifier: &PlayerActionSpc) -> Vec<StockPerSecond> {
     if player_action_modifier.has_affinity {
-        player_action_modifier.base_changes.iter().copied().map(|(sk, base_change)| (sk, base_change * player_action_modifier.affinity_multiplier)).collect()
+        player_action_modifier.base_changes
+        .iter().copied()
+        .map(|sps| StockPerSecond::new(sps.kind, sps.per_second * player_action_modifier.affinity_multiplier))
+        .collect()
     } else {
         player_action_modifier.base_changes.clone()
     }

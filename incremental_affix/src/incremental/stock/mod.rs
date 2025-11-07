@@ -9,7 +9,7 @@ use std::ops::*;
 use bevy::prelude::*;
 
 use crate::incremental::stock::stockyard::{tick_stockyard_system, Stockyard};
-use crate::incremental::IncrementalPlugin;
+use crate::incremental::{IncrementalPlugin, PerSecond};
 use crate::incremental::stock::producer_consumer::{consume_modifiers, init_follower_stockyard_producer_consumer, produce_modifiers, update_follower_modifier, StockSystems};
 
 pub mod producer_consumer;
@@ -198,5 +198,59 @@ impl Stock {
     /// Check if the stock has changed since last time calling this function.
     pub fn has_changed(&mut self) -> bool {
         std::mem::replace(&mut self.has_changed, false)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct StockPerSecond {
+    pub kind: StockKind,
+    pub per_second: PerSecond,
+}
+
+impl StockPerSecond {
+    pub const fn new(kind: StockKind, per_second: PerSecond) -> Self {
+        Self{ kind, per_second, }
+    }
+
+    /// Construct a StockPerSecond with a change of 0 per second.
+    pub const fn none(kind: StockKind) -> Self {
+        Self { kind, per_second: PerSecond(0.0), }
+    }
+
+    pub const fn is_sign_negative(&self) -> bool {
+        self.per_second.0.is_sign_negative()
+    }
+
+    pub const fn is_sign_positive(&self) -> bool {
+        self.per_second.0.is_sign_positive()
+    }
+
+    pub fn negate(self) -> Self {
+        Self {
+            kind: self.kind,
+            per_second: -self.per_second
+        }
+    }
+}
+
+impl Mul<f64> for StockPerSecond {
+    type Output = StockPerSecond;
+
+    fn mul(self, rhs: f64) -> Self::Output {
+        Self::Output {
+            kind: self.kind,
+            per_second: self.per_second * rhs,
+        }
+    }
+}
+
+impl Mul<u32> for StockPerSecond {
+    type Output = StockPerSecond;
+
+    fn mul(self, rhs: u32) -> Self::Output {
+        Self::Output {
+            kind: self.kind,
+            per_second: self.per_second * rhs as f64,
+        }
     }
 }

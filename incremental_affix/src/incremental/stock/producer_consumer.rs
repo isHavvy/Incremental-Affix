@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 use bevy::platform::collections::HashMap;
 
-use crate::incremental::stock::{StockKind, Stockyard};
-use crate::incremental::{DotPerSecond as _, PerSecond};
+use crate::incremental::stock::{StockKind, Stockyard, StockPerSecond};
+use crate::incremental::DotPerSecond as _;
 
 // #[TODO(Havvy)]: Make sure these systems happen in this order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
@@ -16,7 +16,7 @@ pub enum StockSystems {
 /// An effect that consumes or produces stocks over time.
 #[derive(Debug, Component)]
 pub struct StockyardProducerConsumer {
-    pub consumes: Vec<(StockKind, PerSecond)>,
+    pub consumes: Vec<StockPerSecond>,
 
     /// Percent between 0.0 and 1.0 of how much of the stocks consumed exist.
     /// 
@@ -24,7 +24,7 @@ pub struct StockyardProducerConsumer {
     /// 10 each, this will be set to 0.25.
     consumption_fullfilled: f64,
 
-    pub produces: Vec<(StockKind, PerSecond)>,
+    pub produces: Vec<StockPerSecond>,
 }
 
 impl Default for StockyardProducerConsumer {
@@ -68,9 +68,9 @@ pub fn consume_modifiers(
     }
 
     // Sum into the consumption table the total consumption per stock kind.
-    for (stock_kind, consumption) in modifier_query.iter().flat_map(|m| &m.consumes).copied() {
-        let entry = consumption_table.entry(stock_kind).or_insert(0.0);
-        *entry += consumption.per_tick();
+    for consumption in modifier_query.iter().flat_map(|m| &m.consumes).copied() {
+        let entry = consumption_table.entry(consumption.kind).or_insert(0.0);
+        *entry += consumption.per_second.per_tick();
     }
 
     // Remove the total consumption from the stockyard, replacing it with the percentage actually consumed.
@@ -82,11 +82,11 @@ pub fn consume_modifiers(
     for mut modifier in modifier_query.iter_mut() {
         modifier.consumption_fullfilled = modifier.consumes
             .iter()
-            .map(|(stock_kind, _)| stock_kind)
-            .fold(1.0, |min_consumption_percentage, stock_kind| f64::min(min_consumption_percentage, consumption_table[stock_kind]));
+            .map(|sps| sps.kind)
+            .fold(1.0, |min_consumption_percentage, stock_kind| f64::min(min_consumption_percentage, consumption_table[&stock_kind]));
 
         // Actually consume what can be consumed.
-        for (stock_kind, consumption) in modifier.consumes.iter().copied() {
+        for StockPerSecond { kind: stock_kind, per_second: consumption} in modifier.consumes.iter().copied() {
             stockyard[stock_kind] -= consumption.per_tick() * modifier.consumption_fullfilled;
         }
     }
@@ -97,8 +97,8 @@ pub fn produce_modifiers (
 
     pc_query: Query<&mut StockyardProducerConsumer>,
 ) {
-    for (stock_kind, production) in pc_query.iter().flat_map(|pc| pc.produces.iter()) {
-        stockyard[stock_kind] += production.per_tick();
+    for production in pc_query.iter().flat_map(|pc| pc.produces.iter()) {
+        stockyard[production.kind] += production.per_second.per_tick();
     }
 }
 
@@ -117,7 +117,7 @@ pub fn update_follower_modifier(
     let followers = stockyard[StockKind::Followers].current;
 
     // First and only must be a (Food, PerSecond)
-    modifier.consumes[0].1 = (followers * 0.2).per_second();
+    modifier.consumes[0].per_second = (followers * 0.2).per_second();
 
     let godpower = if followers < 10.0 {
         followers / 10.0
@@ -125,7 +125,7 @@ pub fn update_follower_modifier(
         followers.log10() + 1.0
     };
 
-    modifier.produces[0].1 = godpower.per_second();
+    modifier.produces[0].per_second = godpower.per_second();
 }
 
 pub fn init_follower_stockyard_producer_consumer(
@@ -134,9 +134,9 @@ pub fn init_follower_stockyard_producer_consumer(
     commands.spawn((
         FollowerSpc,
         StockyardProducerConsumer {
-            consumes: vec![(StockKind::Food, Default::default())],
+            consumes: vec![StockPerSecond::none(StockKind::Food)],
             consumption_fullfilled: 1.0,
-            produces: vec![(StockKind::Godpower, Default::default())],
+            produces: vec![StockPerSecond::none(StockKind::Godpower)],
         }
     ));
 }

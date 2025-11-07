@@ -1,9 +1,8 @@
 use bevy::ecs::entity_disabling::Disabled;
-use bevy::ecs::system::entity_command::observe;
 use bevy::prelude::*;
-use bevy::ui_widgets::{Activate, Button};
+use bevy::ui_widgets::{Activate, Button, observe};
 
-use crate::incremental::job::{AssignFollower, JobKind};
+use crate::incremental::job::{AssignFollower, JobKind, UnassignFollower};
 use crate::ui::screen::Screen;
 
 pub fn spawn_population_screen(mut commands: Commands, screen_container: Entity) {
@@ -77,7 +76,7 @@ fn spawn_job_row(
         BorderColor::all(Color::BLACK),
 
         Button,
-        // Activate Observer.
+        observe(handle_minus_activate),
 
         children![(
             Text::new("-"),
@@ -95,7 +94,7 @@ fn spawn_job_row(
         BorderColor::all(Color::BLACK),
 
         Button,
-        // observe(handle_plus_activate),
+        observe(handle_plus_activate),
 
         children![(
             Text::new("+"),
@@ -103,7 +102,6 @@ fn spawn_job_row(
         )],
         ChildOf(job_row),
     ));
-
 }
 
 fn handle_plus_activate(
@@ -118,6 +116,22 @@ fn handle_plus_activate(
     let job_kind = *job_kind_query.get(job_row).unwrap();
 
     commands.trigger(AssignFollower {
+        job_kind,
+    });
+}
+
+fn handle_minus_activate(
+    event: On<Activate>,
+
+    mut commands: Commands,
+
+    parent_query: Query<&ChildOf>,
+    job_kind_query: Query<&JobKind, With<Node>>
+) {
+    let job_row = parent_query.get(event.entity).unwrap().0;
+    let job_kind = *job_kind_query.get(job_row).unwrap();
+
+    commands.trigger(UnassignFollower {
         job_kind,
     });
 }
