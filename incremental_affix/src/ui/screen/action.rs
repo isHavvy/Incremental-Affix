@@ -4,7 +4,7 @@ use bevy::color::palettes::css::{self, GRAY};
 use bevy::ui::InteractionDisabled;
 use bevy::ui_widgets::Activate;
 use bevy::prelude::*;
-use bevy::ui_widgets::{observe, Button};
+use bevy::ui_widgets::Button;
 
 use crate::incremental::action::{Action, ActionAffinity, ActionProgress, ChangeAction, CurrentAction, KnownActions, LearnAction, NO_CURRENT_ACTION_DISPLAY};
 use crate::incremental::stats::PlayerActionsStats;
@@ -32,7 +32,7 @@ impl Plugin for ActionScreenPlugin {
     }
 }
 
-#[derive(Debug, Resource)]
+#[derive(Debug, Component, FromTemplate)]
 struct ActionProgressBar {
     /// The bar that fills up as action progress occurs.
     progress_bar: Entity,
@@ -44,158 +44,121 @@ struct ActionProgressBar {
     text: Entity,
 }
 
-pub fn initialize_actions_screen(
-    mut commands: Commands,
-    container: Entity,
-    known_actions: Res<KnownActions>,
-) {
-    let screen = commands.spawn((
+pub fn actions_screen(known_actions: Res<KnownActions>) -> impl Scene {
+    let action_buttons = Action::LIST.iter()
+    .copied()
+    .map(|action| (action, known_actions.contains(&action)))
+    .map(action_button)
+    .collect::<Vec<_>>();
+
+    bsn!{
         Node {
             flex_direction: FlexDirection::Column,
-            flex_grow: 1.,
+            flex_grow: 1.0
+        }
+        Screen::Act
 
-            ..default()
-        },
-        Screen::Act,
-        ChildOf(container)
-    )).id();
-
-    spawn_action_bar(commands.reborrow(), screen);
-
-    for action in Action::LIST.iter().copied() {
-        spawn_action_button(action, commands.reborrow(), &known_actions, screen);
+        Children [
+            action_bar(),
+            { action_buttons }
+        ]
     }
 }
 
-fn spawn_action_bar(
-    mut commands: Commands,
-    container: Entity,
-) {
-    let outer = commands.spawn((
+fn action_bar() -> impl Scene {
+    bsn!{
         Node {
             box_sizing: BoxSizing::ContentBox,
             height: px(21),
             width: ACTION_BAR_WIDTH,
 
-            border: px(2).all(),
+            border: px(2),
 
             justify_content: JustifyContent::FlexStart,
-            align_items: AlignItems::Center,
+            align_items: AlignItems::Center
+        }
+        BackgroundColor(Color::WHITE)
+        BorderColor::all(Color::BLACK)
 
-            ..default()
-        },
-        BackgroundColor(Color::WHITE),
-        BorderColor::all(Color::BLACK),
-        ChildOf(container),
-    )).id();
+        ActionProgressBar {
+            progress_bar: #ProgressBar,
+            affinity_bar: #AffinityBar,
+            text: #Text
+        }
 
-    let progress_bar = commands.spawn((
-        Node {
-            width: percent(0),
-            height: percent(100),
+        Children [
+            #ProgressBar
+            Node {
+                width: percent(0),
+                height: percent(100),
 
-            align_content: AlignContent::Center,
-            justify_content: JustifyContent::Center,
-            ..default()
-        },
-        BackgroundColor(Color::srgb(1.0, 0.0, 0.0)),
-        ZIndex(0),
+                align_content: AlignContent::Center,
+                justify_content: JustifyContent::Center,
+            }
+            BackgroundColor(Color::srgb(1.0, 0.0, 0.0))
+            ZIndex(0),
 
-        ChildOf(outer),
-    )).id();
+            #AffinityBar
+            Node {
+                position_type: PositionType::Absolute,
+                width: ACTION_BAR_WIDTH,
+                top: percent(67),
+                height: percent(33),
+            }
+            BackgroundColor(css::LIMEGREEN)
+            ZIndex(1),
 
-    let affinity_bar = commands.spawn((
-        Node {
-            position_type: PositionType::Absolute,
-            width: ACTION_BAR_WIDTH,
-            top: percent(67),
-            height: percent(33),
-            ..default()
-        },
-        BackgroundColor(css::LIMEGREEN.into()),
-        ZIndex(1),
-
-        ChildOf(outer),
-    )).id();
-
-    let text = commands.spawn((
-        Node {
-            position_type: PositionType::Absolute,
-            width: ACTION_BAR_WIDTH,
-            ..default()
-        },
-        ZIndex(2),
-
-        Text::new(NO_CURRENT_ACTION_DISPLAY),
-        TextColor(Color::BLACK),
-        TextLayout {
-            justify: Justify::Center,
-            ..default()
-        },
-
-        ChildOf(outer),
-    )).id();
-
-    commands.insert_resource(ActionProgressBar {
-        text,
-        progress_bar,
-        affinity_bar,
-    });
+            #Text
+            Node {
+                position_type: PositionType::Absolute,
+                width: ACTION_BAR_WIDTH
+            }
+            ZIndex(2)
+            Text::new(NO_CURRENT_ACTION_DISPLAY)
+            TextColor(Color::BLACK)
+            TextLayout::justify(Justify::Center)
+        ]
+    }
 }
 
-fn spawn_action_button(
-    action: Action,
-
-    mut commands: Commands,
-
-    known_actions: &KnownActions,
-
-    container: Entity,
-) {
-    let action_is_known = known_actions.contains(&action);
-
-    let mut button_container = commands.spawn((
+fn action_button((action, action_is_known): (Action, bool)) -> impl Scene {
+    let scene = bsn! {
         Node {
-            display: if action_is_known { Display::Flex } else { Display::None },
+            display: { if action_is_known { Display::Flex } else { Display::None } },
             border: UiRect::all(Val::Px(2.)),
             height: Val::Px(25.0),
             width: Val::Px(200.0),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
             margin: UiRect::all(Val::Px(8.0)),
-            ..default()
-        },
-        BorderColor::all(Color::BLACK),
+        }
+        BorderColor::all(Color::BLACK)
 
-        action,
+        template_value(action)
 
-        Button,
-        observe(on_press_button_action),
+        Button
+        on(on_press_button_action)
 
-        ChildOf(container),
-    ));
+        Children [
+            Text::new(action.to_string())
+            TextFont { font_size: px(20.0) }
+            TextColor({ if action_is_known { BUTTON_ENABLED_COLOR } else { BUTTON_DISABLED_COLOR } })
+        ]
+    };
 
     if !action_is_known {
-        button_container.insert(InteractionDisabled);
+        Box::new(bsn! {
+            scene
+            InteractionDisabled
+        }) as Box<dyn Scene>
+    } else {
+        Box::new(scene) as Box<dyn Scene>
     }
-
-    let button_container = button_container.id();
-
-    commands.spawn((
-        Text::new(action.to_string()),
-        TextFont {
-            font_size: FontSize::Px(20.0),
-            ..default()
-        },
-        TextColor(if action_is_known { BUTTON_ENABLED_COLOR } else { BUTTON_DISABLED_COLOR }),
-
-        ChildOf(button_container),
-    ));
 }
 
 fn update_action_bar_progress_bar(
     progress: Res<ActionProgress>,
-    progress_bar: Res<ActionProgressBar>,
+    progress_bar: Single<&ActionProgressBar>,
     mut node_query: Query<&mut Node>,
 ) {
     let progress_bar = progress_bar.progress_bar;
@@ -205,7 +168,7 @@ fn update_action_bar_progress_bar(
 
 fn on_current_action_change_system(
     current_action: Res<CurrentAction>,
-    progress_bar: Res<ActionProgressBar>,
+    progress_bar: Single<&ActionProgressBar>,
 
     mut text_query: Query<&mut Text>,
     mut node_query: Query<&mut Node>,
@@ -283,7 +246,7 @@ fn on_changed_player_stats_system(
 }
 
 fn update_action_bar_affinity_bar(
-    action_bar: Res<ActionProgressBar>,
+    action_bar: Single<&ActionProgressBar>,
     action_affinity: Res<ActionAffinity>,
 
     mut node_query: Query<&mut Node>,

@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use std::time::Duration;
 
+use bevy::ecs::VariantDefaults;
 use bevy::prelude::*;
 use bevy::platform::collections::HashSet;
 
@@ -43,8 +44,9 @@ impl Plugin for ActionPlugin {
 /// An action the player can perform.
 /// 
 /// The player can only perform one action at a time.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Component)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Component, VariantDefaults, Default)]
 pub enum Action {
+    #[default] // To satisify using in BSN.
     Explore,
     GatherWood,
     GatherStone,

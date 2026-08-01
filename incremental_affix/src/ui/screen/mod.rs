@@ -22,7 +22,7 @@ impl Screen {
     pub const LIST: &[Self] = &[Self::Act, Self::Population, Self::Inventory, Self::Craft];
 }
 
-impl std::fmt::Display for Screen {    
+impl std::fmt::Display for Screen {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match self {
             Self::Act => "Act",
@@ -67,13 +67,12 @@ pub fn spawn_screens_ui(
     )).id();
 
     setup_screens_bar(commands.reborrow(), screen_select_bar, font.clone());
-    action::initialize_actions_screen(
-        commands.reborrow(),
-        screen_container,
-        known_actions,
-    );
+    let mut actions_screen = commands.spawn_scene(action::actions_screen(known_actions));
+    actions_screen.insert(ChildOf(screen_container));
+
     craft::spawn_crafting_screen(commands.reborrow(), screen_container);
     inventory::spawn_inventory_screen(commands.reborrow(), screen_container);
+
     let mut population_screen = commands.spawn_scene(population::population_screen());
     population_screen.insert(ChildOf(screen_container));
 }
