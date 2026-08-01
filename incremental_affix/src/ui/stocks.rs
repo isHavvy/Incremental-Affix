@@ -10,8 +10,8 @@ pub fn spawn_stocks_ui(commands: &mut Commands, sidebar: Entity, font: Handle<Fo
         },
         Text::new("Resources"),
         TextFont {
-            font,
-            font_size: 30.0,
+            font: FontSource::Handle(font),
+            font_size: FontSize::Px(30.0),
             ..default()
         },
         TextColor(Color::BLACK),
@@ -19,47 +19,38 @@ pub fn spawn_stocks_ui(commands: &mut Commands, sidebar: Entity, font: Handle<Fo
     ));
 
     for stock_kind in StockKind::LIST.iter().cloned() {
-        spawn_stocks_stock_kind_line(commands.reborrow(), sidebar, stock_kind);
+        commands.spawn_scene(bsn! {
+            stock_kind_line(stock_kind)
+            ChildOf(sidebar)
+        });
     }
 }
 
-fn spawn_stocks_stock_kind_line(mut commands: Commands, parent: Entity, stock_kind: StockKind) {
-    let container = commands.spawn((
-        Node {
-            flex_direction: FlexDirection::Row,
-            ..default()
-        },
-        ChildOf(parent),
-    )).id();
+fn stock_kind_line(stock_kind: StockKind) -> impl Scene {
+    bsn! {
+        Node { flex_direction: FlexDirection::Row }
+        Children [
+            Text::new(stock_kind.to_string())
+            TextLayout::justify(Justify::Left),
+            TextColor(Color::BLACK),
 
-    commands.spawn((
-        Text::new(stock_kind.to_string()),
+            Node { flex_grow: 1.0 }
+            Text::new("")
+            TextLayout::justify(Justify::Right)
+            template_value(stock_kind)
+            Children [
+                TextSpan::new("(0.00)")
+                TextColor(Color::BLACK)
+                TextFont { font_size: px(14.0) },
 
-        TextLayout::new_with_justify(Justify::Left),
-        TextColor(Color::BLACK),
+                TextSpan::new(" "),
 
-        ChildOf(container)
-    ));
-
-    commands.spawn((
-        Node {
-            flex_grow: 1.0,
-            ..default()
-        },
-
-        Text::new(""),
-        TextLayout::new_with_justify(Justify::Right),
-
-        stock_kind,
-
-        children![
-            (TextSpan::new("(0.00)"), TextColor(Color::BLACK), TextFont { font_size: 14.0, ..default() },),
-            TextSpan::new(" "),
-            (TextSpan::new("0.00/100"), TextColor(Color::BLACK), TextFont { font_size: 14.0, ..default() },),
-        ],
-
-        ChildOf(container)
-    ));
+                TextSpan::new("0.00/100")
+                TextColor(Color::BLACK)
+                TextFont { font_size: px(14.0) }
+            ]
+        ]
+    }
 }
 
 pub fn update_resources_sidebar(

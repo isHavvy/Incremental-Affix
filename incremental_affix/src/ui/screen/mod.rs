@@ -9,8 +9,9 @@ pub mod inventory;
 pub mod population;
 
 /// Kinds of screens in the game
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Component)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Component, FromTemplate)]
 pub enum Screen {
+    #[default]
     Act,
     Population,
     Inventory,
@@ -73,7 +74,8 @@ pub fn spawn_screens_ui(
     );
     craft::spawn_crafting_screen(commands.reborrow(), screen_container);
     inventory::spawn_inventory_screen(commands.reborrow(), screen_container);
-    population::spawn_population_screen(commands.reborrow(), screen_container);
+    let mut population_screen = commands.spawn_scene(population::population_screen());
+    population_screen.insert(ChildOf(screen_container));
 }
 
 /// The screens bar is the bar of buttons that allows changing the active screen.
@@ -100,8 +102,8 @@ pub fn setup_screens_bar(mut commands: Commands, bar: Entity, font: Handle<Font>
                 Text(screen.to_string()),
                 TextColor(Color::WHITE),
                 TextFont {
-                    font: font.clone(),
-                    font_size: 20.0,
+                    font: FontSource::Handle(font.clone()),
+                    font_size: FontSize::Px(20.0),
                     ..default()
                 },
             )],

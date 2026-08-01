@@ -32,7 +32,7 @@ pub fn spawn_item_details(
 
         children![(
             Text::new(item.name().to_string()),
-            TextFont { font_size: 16.0, ..default() }
+            TextFont { font_size: FontSize::Px(16.0), ..default() }
         )],
 
         ChildOf(item_box),
@@ -46,7 +46,7 @@ pub fn spawn_item_details(
 
             children![(
                 Text::new(format!("* {}", implicit.display())),
-                TextFont { font_size: 14.0, ..default() }
+                TextFont { font_size: FontSize::Px(14.0), ..default() }
             )],
 
             ChildOf(item_box),
@@ -73,7 +73,7 @@ pub fn spawn_item_details(
 
                 children![(
                     Text::new(format!("P {}", prefix.display())),
-                    TextFont { font_size: 14.0, ..default() }
+                    TextFont { font_size: FontSize::Px(14.0), ..default() }
                 )],
 
                 ChildOf(prefixes_node),
@@ -101,7 +101,7 @@ pub fn spawn_item_details(
 
                 children![(
                     Text::new(format!("S {}", suffix.display())),
-                    TextFont { font_size: 14.0, ..default() }
+                    TextFont { font_size: FontSize::Px(14.0), ..default() }
                 )],
 
                 ChildOf(suffixes_node),
@@ -117,7 +117,7 @@ pub fn spawn_item_details(
 
             children![(
                 Text::new(format!("[{}]", tag)),
-                TextFont { font_size: 14.0, ..default() }
+                TextFont { font_size: FontSize::Px(14.0), ..default() }
             )],
 
             ChildOf(item_box),

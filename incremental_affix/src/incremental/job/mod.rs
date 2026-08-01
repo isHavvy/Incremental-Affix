@@ -26,13 +26,30 @@ impl Plugin for JobsPlugin {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Component)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash, Component)]
 pub enum JobKind {
+    #[default]
     ChopWood,
     Hunt,
     RenderCarcass,
     Cook,
 }
+
+// impl Template for JobKind {
+//     type Output = Self;
+
+//     fn build_template(&self, _context: &mut bevy::ecs::template::TemplateContext) -> Result<Self::Output> {
+//         Ok(self.clone())
+//     }
+
+//     fn clone_template(&self) -> Self {
+//         self.clone()
+//     }
+// }
+
+// impl FromTemplate for JobKind {
+//     type Template = Self;
+// }
 
 impl JobKind {
     pub const LIST: &[Self] = &[Self::ChopWood, Self::Hunt, Self::RenderCarcass, Self::Cook];

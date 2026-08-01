@@ -1,107 +1,69 @@
 use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
-use bevy::ui_widgets::{Activate, Button, observe};
+use bevy::ui_widgets::{Activate, Button};
 
 use crate::incremental::job::{AssignFollower, JobKind, UnassignFollower};
 use crate::ui::screen::Screen;
 
-pub fn spawn_population_screen(mut commands: Commands, screen_container: Entity) {
-    let screen = commands.spawn((
+pub fn population_screen() -> impl Scene {
+    bsn! {
         Node {
             display: Display::None,
 
             flex_direction: FlexDirection::Column,
-            flex_grow: 1.,
+            flex_grow: 1.0
+        }
+        Screen::Population
 
-            //height: percent(100.0),
-            ..default()
-        },
-        Screen::Population,
-        ChildOf(screen_container),
-    )).id();
-
-    JobKind::LIST.iter().copied().for_each(|job| spawn_job_row(commands.reborrow(), job, screen))
+        Children [
+            { JobKind::LIST.iter().copied().map(job_row).collect::<Vec<_>>() }
+        ]
+    }
 }
 
-fn spawn_job_row(
-    mut commands: Commands,
-    job_kind: JobKind,
-    parent: Entity,
-) {
-    let job_row = commands.spawn((
-        Node {
-            flex_direction: FlexDirection::Row,
+fn job_row (job_kind: JobKind) -> impl Scene {
+    let job_row = bsn! {
+        Node { flex_direction: FlexDirection::Row }
+        template_value(job_kind)
 
-            ..default()
-        },
+        Children[
+            Node { margin: { px(4).right() } }
+            Text::new("0")
+            TextColor::BLACK,
 
-        job_kind,
-        
-        ChildOf(parent),
-    )).id();
+            Node { margin: { px(4).right() } }
+            Text::new(job_kind.to_string())
+            TextColor::BLACK,
+
+            Node {
+                border: px(1),
+                margin: { px(4).right() },
+            }
+            BorderColor::all(Color::BLACK)
+            Button
+            on(handle_minus_activate)
+            Children [
+                (Text::new("-") TextColor::BLACK)
+            ],
+
+            Node { border: px(1) }
+            BorderColor::all(Color::BLACK)
+            Button
+            on(handle_plus_activate)
+            Children[
+                Text::new("+") TextColor::BLACK
+            ]
+        ]
+    };
 
     if matches!(job_kind, JobKind::RenderCarcass) {
-        commands.entity(job_row).insert(Disabled);
+        Box::new(bsn! {
+            job_row
+            Disabled
+        }) as Box<dyn Scene>
+    } else {
+        Box::new(job_row) as Box<dyn Scene>
     }
-
-    commands.spawn((
-        Node {
-            margin: px(4).right(),
-            ..default()
-        },
-        Text::new("0"),
-        TextColor::BLACK,
-
-        ChildOf(job_row),
-    ));
-
-    commands.spawn((
-        Node {
-            margin: px(4).right(),
-            ..default()
-        },
-        Text::new(job_kind.to_string()),
-        TextColor::BLACK,
-
-        ChildOf(job_row),
-    ));
-
-    commands.spawn((
-        Node {
-            border: px(1).all(),
-            margin: px(4).right(),
-
-            ..default()
-        },
-        BorderColor::all(Color::BLACK),
-
-        Button,
-        observe(handle_minus_activate),
-
-        children![(
-            Text::new("-"),
-            TextColor::BLACK,
-        )],
-        ChildOf(job_row),
-    ));
-
-    commands.spawn((
-        Node {
-            border: px(1).all(),
-
-            ..default()
-        },
-        BorderColor::all(Color::BLACK),
-
-        Button,
-        observe(handle_plus_activate),
-
-        children![(
-            Text::new("+"),
-            TextColor::BLACK,
-        )],
-        ChildOf(job_row),
-    ));
 }
 
 fn handle_plus_activate(

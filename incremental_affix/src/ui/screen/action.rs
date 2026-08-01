@@ -184,7 +184,7 @@ fn spawn_action_button(
     commands.spawn((
         Text::new(action.to_string()),
         TextFont {
-            font_size: 20.0,
+            font_size: FontSize::Px(20.0),
             ..default()
         },
         TextColor(if action_is_known { BUTTON_ENABLED_COLOR } else { BUTTON_DISABLED_COLOR }),

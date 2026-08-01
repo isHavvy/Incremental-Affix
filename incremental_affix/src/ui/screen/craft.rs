@@ -31,7 +31,7 @@ pub fn spawn_crafting_screen(mut commands: Commands, parent_node: Entity) {
             Text::new("Craft"),
             TextColor(Color::BLACK),
             TextFont {
-                font_size: 32.,
+                font_size: FontSize::Px(32.),
                 ..default()
             }
         )],

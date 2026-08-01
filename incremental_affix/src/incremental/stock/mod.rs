@@ -6,6 +6,7 @@
 use std::fmt::Write as _;
 use std::ops::*;
 
+use bevy::ecs::VariantDefaults;
 use bevy::prelude::*;
 
 use crate::incremental::stock::stockyard::{tick_stockyard_system, Stockyard};
@@ -31,10 +32,11 @@ impl Plugin for StockPlugin {
 }
 
 /// A numeric resource controlled by the player.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Component)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Component, VariantDefaults)]
 pub enum StockKind {
     // #[TODO(Havvy)]: Move this out of Resources.
     // It's currently here to show up in the resources sidebar.
+    #[default]
     BranchesAndPebbles,
     Godpower,
     Followers,

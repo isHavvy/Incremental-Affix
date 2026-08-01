@@ -15,7 +15,7 @@ impl Stockyard {
     #[expect(unused)]
     pub fn get_stocks_mut<const N: usize>(&mut self, stocks: [&StockKind; N]) -> [&mut Stock; N] {
         // The unwrap will not panic because every stock kind has an associated value in the stockyard hashmap.
-        self.stocks.get_many_mut(stocks).map(Option::unwrap)
+        self.stocks.get_disjoint_mut(stocks).map(Option::unwrap)
     }
 }
 
