@@ -21,6 +21,7 @@ impl Plugin for UiPlugin {
 
         .add_plugins((
             screen::action::ActionScreenPlugin,
+            screen::population::PopulationScreenPlugin,
         ))
 
         .add_observer(screen::inventory::on_item_craft)
@@ -80,6 +81,10 @@ fn setup(
     )).id();
 
     stocks::spawn_stocks_ui(&mut commands, sidebar, font.clone());
-    screen::spawn_screens_ui(commands.reborrow(), right_of_sidebar, font.clone(), known_actions);
+    let(screen1, screen2) = screen::screens_ui(known_actions);
+    let mut screen1 = commands.queue_spawn_scene(screen1);
+    screen1.insert(ChildOf(right_of_sidebar));
+    let mut screen2 = commands.queue_spawn_scene(screen2);
+    screen2.insert(ChildOf(right_of_sidebar));
     log::GameLogPlugin::setup_log_ui(commands, right_of_sidebar);
 }

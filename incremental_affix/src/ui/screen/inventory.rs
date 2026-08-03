@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::ui_widgets::{observe, Activate, Button};
+use bevy::ui_widgets::{Activate, Button};
 
 use crate::incremental::item::affixive_item::PushAffixError;
 use crate::incremental::item::equipment::Equipped;
@@ -11,178 +11,153 @@ use crate::ui::tooltip::{HideTooltip, ShowTooltip};
 use crate::ui::item::spawn_item_details;
 use crate::ui::screen::Screen;
 
-#[derive(Debug, Resource)]
-pub struct InventoryScreen(Entity);
+#[derive(Debug, Clone, Component, FromTemplate)]
+pub struct InventoryList(Entity);
 
-impl InventoryScreen {
+impl InventoryList {
     pub fn get(&self) -> Entity {
         self.0
     }
 }
 
-#[derive(Debug, Component)]
+#[derive(Debug, Clone, Component, FromTemplate)]
 pub struct CorrespondingItem(Entity);
 
-#[derive(Debug, Resource)]
-pub struct ActiveSlot(Entity);
+#[derive(Debug, Clone, Copy, Default, Component)]
+pub struct ActiveSlot;
 
-pub fn spawn_inventory_screen(mut commands: Commands, parent: Entity) {
-    let inventory_screen = commands.spawn((
+pub fn inventory_screen() -> impl Scene {
+    bsn! {
         Node {
             display: Display::None,
 
             flex_direction: FlexDirection::Column,
+        }
 
-            ..default()
-        },
+        Screen::Inventory
+        InventoryList(#InventoryList)
 
-        Screen::Inventory,
+        Children [
+            (
+                #Slots
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    height: px(150)
+                }
+                BackgroundColor(Color::srgb_u8(137, 81, 41))
+                Children [
+                    #ToolSlot
+                    ActiveSlot
+                    slot(ItemSlotTag::Tool),
 
-        ChildOf(parent),
-    )).id();
+                    #HuntSlot
+                    slot(ItemSlotTag::Hunt),
+                ]
+            ),
 
-    let slots = commands.spawn((
-        Node {
-            flex_direction: FlexDirection::Row,
-            height: px(150),
-
-            ..default()
-        },
-        BackgroundColor(Color::srgb_u8(137, 81, 41)),
-
-        ChildOf(inventory_screen)
-    )).id();
-
-    let tool_slot = spawn_slot(commands.reborrow(), slots, ItemSlotTag::Tool);
-    let _hunt_slot = spawn_slot(commands.reborrow(), slots, ItemSlotTag::Hunt);
-
-    commands.insert_resource(ActiveSlot(tool_slot));
-    commands.insert_resource(InventoryScreen(inventory_screen));
+            #InventoryList
+            Node {
+                flex_direction: FlexDirection::Column,
+            }
+            BackgroundColor(Color::srgb_u8(67, 111, 71))
+        ]
+    }
 }
 
-fn spawn_slot(mut commands: Commands, parent: Entity, slot_tag: ItemSlotTag) -> Entity {
-    let container = commands.spawn((
+fn slot(slot_tag: ItemSlotTag) -> impl Scene {
+    bsn!{
         Node {
             flex_direction: FlexDirection::Column,
 
             box_sizing: BoxSizing::BorderBox,
             width: px(150),
-            margin: px(4).all(),
-            border: px(2).all(),
+            border: { px(2).all() },
+            margin: { px(4).all() },
 
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
-            
-            ..Default::default()
-        },
-        BorderColor::all(Color::BLACK),
-        BackgroundColor(Color::srgb(0., 0.7, 0.)),
+        }
+        BorderColor::all(Color::BLACK)
+        BackgroundColor(Color::srgb(0., 0.7, 0.))
 
-        Button,
-        observe(on_slot_hover),
-        observe(on_out_hide_tooltip),
-        observe(on_slot_activate),
+        Button
+        on(on_slot_hover)
+        on(on_out_hide_tooltip)
+        on(on_slot_activate)
 
         ItemSlot {
             tag: slot_tag,
             item: None,
-        },
+        }
 
-        ChildOf(parent),
-    )).id();
-
-    let _slot_name = commands.spawn((
-        Text::new(slot_tag.to_string()),
-        ChildOf(container),
-    ));
-
-    container
+        Children [
+            #SlotName
+            Text::new(slot_tag.to_string())
+        ]
+    }
 }
 
 pub fn on_item_craft(
     event: On<Crafted>,
     mut commands: Commands,
 
-    inventory_screen: Res<InventoryScreen>,
+    inventory_list: Single<&InventoryList>,
 
     item_query: Query<&AffixiveItem>,
+
+    mut log_event_writer: MessageWriter<LogMessage>,
 ) {
     let item = item_query.get(event.crafted_item).unwrap();
-    spawn_inventory_item(commands.reborrow(), &inventory_screen, event.crafted_item, item.name().to_string());
+    commands.spawn_scene(bsn! {
+        inventory_item(event.crafted_item, item.name().to_string())
+        ChildOf({ inventory_list.get() })
+    });
+    log_event_writer.write(LogMessage(format!("Crafted '{}'", item.name())));
 }
 
-pub fn spawn_inventory_item(
-    mut commands: Commands,
-    inventory_screen: &InventoryScreen,
-    item_entity: Entity,
-    item_name: String,
-) {
-    let line = commands.spawn((
+pub fn inventory_item(item_entity: Entity, item_name: String) -> impl Scene {
+    bsn! {
+        #Line
+        Node
+        CorrespondingItem(item_entity)
+
+        on(on_inventory_hover)
+        on(on_out_hide_tooltip)
+
+        Children [
+            line_button("E")
+            on(on_activate_button_equip),
+
+            line_button("R")
+            on(on_activate_button_roll),
+
+            Text(item_name)
+            TextColor::BLACK
+        ]
+    }
+}
+
+pub fn line_button(text: &'static str) -> impl Scene {
+    bsn!{
         Node {
-            ..default()
-        },
-
-        CorrespondingItem(item_entity),
-
-        observe(on_inventory_hover),
-        observe(on_out_hide_tooltip),
-
-        ChildOf(inventory_screen.get())
-    )).id();
-
-    commands.spawn((
-        Node {
-            border: px(1).all(),
-            margin: px(4).right(),
-
-            ..default()
-        },
-        BorderColor::all(Color::BLACK),
-
-        Button,
-        observe(on_activate_button_equip),
-
-        children![(
-            Text::new("E"),
-            TextColor(Color::BLACK),
-        )],
-
-        ChildOf(line),
-    ));
-
-    commands.spawn((
-        Node {
-            border: px(1).all(),
-            margin: px(4).right(),
-
-            ..default()
-        },
-        BorderColor::all(Color::BLACK),
-
-        Button,
-        observe(on_activate_button_roll),
-
-        children![(
-            Text::new("R"),
-            TextColor(Color::BLACK),
-        )],
-
-        ChildOf(line),
-    ));
-
-    commands.spawn((
-        Text(item_name),
-        TextColor(Color::BLACK),
-        ChildOf(line)
-    ));
+            border: px(1),
+            margin: px(4),
+        }
+        BorderColor::all(Color::BLACK)
+        Button
+        Children [
+            Text::new(text)
+            TextColor::BLACK
+        ]
+    }
 }
 
 fn on_activate_button_equip(
     event: On<Activate>,
     mut commands: Commands,
 
-    active_slot: Res<ActiveSlot>,
-    inventory_screen: Res<InventoryScreen>,
+    active_slot: Single<(&ActiveSlot, Entity)>,
+    inventory_screen: Single<&InventoryList>,
     item_db: Res<ItemDatabase>,
 
     parent_query: Query<&ChildOf>,
@@ -196,7 +171,7 @@ fn on_activate_button_equip(
     let item = item_query.get(corresponding_item)
     .expect("Corresponding item entity must have an item component.");
 
-    let mut item_slot = item_slot_query.get_mut(active_slot.0)
+    let mut item_slot = item_slot_query.get_mut(active_slot.1)
     .expect("Active slot resource must have an item slot component.");
 
     let item_tag = ItemTag::from(item_slot.tag);
@@ -213,7 +188,10 @@ fn on_activate_button_equip(
 
         let name = previous_item.name().to_string();
 
-        spawn_inventory_item(commands.reborrow(), &inventory_screen, previous_item_entity, name.to_string());
+        commands.spawn_scene(bsn!{
+            inventory_item(previous_item_entity, name.to_string())
+            ChildOf({ inventory_screen.get() })
+        });
     }
     commands.entity(item_node).despawn();
 
@@ -299,8 +277,10 @@ fn on_out_hide_tooltip(
 
 fn on_slot_activate(
     event: On<Activate>,
+    mut commands: Commands,
 
-    mut active_slot: ResMut<ActiveSlot>,
+    active_slot: Single<(&ActiveSlot, Entity)>,
 ) {
-    active_slot.0 = event.entity;
+    commands.get_entity(active_slot.1).unwrap().remove::<ActiveSlot>();
+    commands.get_entity(event.entity).unwrap().insert(ActiveSlot);
 }

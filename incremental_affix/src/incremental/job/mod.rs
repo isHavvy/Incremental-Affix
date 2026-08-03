@@ -126,13 +126,28 @@ fn initialize_jobs(
 /// This must always be less than or equal to the number of followers in the stockyard.
 struct FollowersAssigned(u32);
 
+/// Event for the UI to trigger when the user tries to assign a follower.
 #[derive(Debug, Event)]
-pub struct AssignFollower {
+pub struct AssignFollowerRequest {
     pub job_kind: JobKind,
 }
 
+/// Event for the UI to trigger when the user tries to unassign a follower.
+#[derive(Debug, Event)]
+pub struct UnassignFollowerRequest {
+    pub job_kind: JobKind,
+}
+
+/// Event fired when the number of followers doing a job changes.
+#[derive(Debug, Event)]
+pub struct FollowerAssignedChange {
+    pub job_kind: JobKind,
+    pub new_follower_count: u32,
+}
+
 fn on_assign_follower(
-    event: On<AssignFollower>,
+    event: On<AssignFollowerRequest>,
+    mut commands: Commands,
 
     mut followers_assigned: ResMut<FollowersAssigned>,
     stockyard: Res<Stockyard>,
@@ -152,15 +167,15 @@ fn on_assign_follower(
     .expect("There should be an entity with a job for each job kind.");
 
     job.followers_assigned += 1;
-}
-
-#[derive(Debug, Event)]
-pub struct UnassignFollower {
-    pub job_kind: JobKind,
+    commands.trigger(FollowerAssignedChange {
+        job_kind: event.job_kind,
+        new_follower_count: job.followers_assigned
+    })
 }
 
 fn on_unassign_follower(
-    event: On<UnassignFollower>,
+    event: On<UnassignFollowerRequest>,
+    mut commands: Commands,
 
     mut followers_assigned: ResMut<FollowersAssigned>,
 
@@ -176,4 +191,8 @@ fn on_unassign_follower(
 
     job.followers_assigned -= 1;
     followers_assigned.0 -= 1;
+    commands.trigger(FollowerAssignedChange {
+        job_kind: event.job_kind,
+        new_follower_count: followers_assigned.0,
+    });
 }

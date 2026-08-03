@@ -1,5 +1,7 @@
+use bevy::ecs::VariantDefaults;
 use bevy::prelude::*;
-use bevy::ui_widgets::{observe, Activate, Button};
+use bevy::text::FontSourceTemplate;
+use bevy::ui_widgets::{Activate, Button};
 
 use crate::incremental::action::KnownActions;
 
@@ -8,10 +10,10 @@ pub mod craft;
 pub mod inventory;
 pub mod population;
 
-/// Kinds of screens in the game
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Component, FromTemplate)]
+/// Kinds of screens in the game ui
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Component, Default, VariantDefaults)]
 pub enum Screen {
-    #[default]
+    #[default] // Needed to use in BSN.
     Act,
     Population,
     Inventory,
@@ -33,83 +35,66 @@ impl std::fmt::Display for Screen {
     }
 }
 
-pub fn spawn_screens_ui(
-    mut commands: Commands,
-    parent_ui_node: Entity,
-    font: Handle<Font>,
-    known_actions: Res<KnownActions>,
-) {
-    // Top bar with the screen switching stuff.
-    let screen_select_bar = commands.spawn((
-        Node {
-            height: px(48),
-            width: percent(100),
+pub fn screens_ui(known_actions: Res<KnownActions>) -> (impl Scene, impl Scene) {
+    (
+        bsn! {
+            #ScreenSelectBar
+            Node {
+                height: px(48),
+                width: percent(100),
 
-            align_self: AlignSelf::Center,
-
-            ..default()
-        },
-        BackgroundColor(Color::srgb(0.0, 0.8, 0.0)),
-        ChildOf(parent_ui_node)
-    )).id();
-
-    let screen_container = commands.spawn((
-        Node {
-            flex_grow: 1.0,
-            overflow: Overflow::scroll_y(),
-
-            padding: UiRect { left: px(10), right: px(0), top: px(10), bottom: px(0) },
-
-            ..default()
+                align_self: AlignSelf::Center,
+            }
+            BackgroundColor(Color::srgb(0.0, 0.8, 0.0))
+            Children [ { screens_select_bar_buttons() } ]
         },
 
-        ChildOf(parent_ui_node),
-    )).id();
+        bsn! {
+            #ScreenContainer
+            Node {
+                flex_grow: 1.0,
+                overflow: Overflow::scroll_y(),
 
-    setup_screens_bar(commands.reborrow(), screen_select_bar, font.clone());
-    let mut actions_screen = commands.spawn_scene(action::actions_screen(known_actions));
-    actions_screen.insert(ChildOf(screen_container));
+                padding: UiRect { left: px(10), right: px(0), top: px(10), bottom: px(0) },
+            }
 
-    craft::spawn_crafting_screen(commands.reborrow(), screen_container);
-    inventory::spawn_inventory_screen(commands.reborrow(), screen_container);
-
-    let mut population_screen = commands.spawn_scene(population::population_screen());
-    population_screen.insert(ChildOf(screen_container));
+            Children [
+                action::actions_screen(known_actions),
+                craft::crafting_screen(),
+                inventory::inventory_screen(),
+                population::population_screen(),
+            ]
+        }
+    )
 }
 
-/// The screens bar is the bar of buttons that allows changing the active screen.
-pub fn setup_screens_bar(mut commands: Commands, bar: Entity, font: Handle<Font>) {
-    for screen in Screen::LIST.iter().cloned() {
-        commands.spawn((
-            Node {
-                height: px(40),
+fn screens_select_bar_buttons() -> impl SceneList {
+    Screen::LIST.iter().cloned()
+    .map(|screen| bsn! {
+        Node {
+            height: px(40),
 
-                border: px(2).all(),
-                margin: px(5).right(),
+            border: { px(2).all() },
+            margin: { px(5).right() },
 
-                align_items: AlignItems::Center,
-                
-                ..default()
+            align_content: AlignContent::Center,
+        }
+        BorderColor::all(Color::BLACK)
+
+        Button
+        template_value(screen)
+        on(on_activate_button_screen_change)
+
+        Children [
+            Text({ screen.to_string() })
+            TextColor(Color::WHITE)
+            TextFont {
+                font: FontSourceTemplate::Handle("fonts/FiraSans-Bold.ttf"),
+                font_size: FontSize::Px(20.0),
             },
-            BorderColor::all(Color::BLACK),
-
-            Button,
-            screen,
-            observe(on_activate_button_screen_change),
-
-            children![(
-                Text(screen.to_string()),
-                TextColor(Color::WHITE),
-                TextFont {
-                    font: FontSource::Handle(font.clone()),
-                    font_size: FontSize::Px(20.0),
-                    ..default()
-                },
-            )],
-
-            ChildOf(bar),
-        ));
-    }
+        ]
+    })
+    .collect::<Vec<_>>()
 }
 
 pub fn on_activate_button_screen_change(

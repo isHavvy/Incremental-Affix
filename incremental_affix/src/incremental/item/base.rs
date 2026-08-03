@@ -8,8 +8,9 @@ use crate::incremental::item::affixive_item::{ImplicitIndex, ItemTag};
 /// 
 /// To access an affixive base, get the `Res<ItemDatabase>` and
 /// call `ItemDatabase.`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Component)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Component, Default)]
 pub enum Base {
+    #[default] // To allow inclusion in BSN.
     TestTools,
     MakeshiftTools,
     StoneTools,

@@ -190,6 +190,7 @@ fn on_press_button_action(
     mut commands: Commands,
     actions_query: Query<&Action>,
 ) {
+    eprintln!("Click action");
     let new_action = actions_query.get(activate.entity).expect("Action button must have an Action component.");
     commands.trigger(ChangeAction::new(*new_action));    
 }

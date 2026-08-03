@@ -2,8 +2,18 @@ use bevy::ecs::entity_disabling::Disabled;
 use bevy::prelude::*;
 use bevy::ui_widgets::{Activate, Button};
 
-use crate::incremental::job::{AssignFollower, JobKind, UnassignFollower};
+use crate::incremental::job::{AssignFollowerRequest, FollowerAssignedChange, JobKind, UnassignFollowerRequest};
 use crate::ui::screen::Screen;
+
+pub struct PopulationScreenPlugin;
+
+impl Plugin for PopulationScreenPlugin {
+    fn build(&self, app: &mut App) {
+        app
+        .add_observer(on_population_assigned_changed)
+        ;
+    }
+}
 
 pub fn population_screen() -> impl Scene {
     bsn! {
@@ -77,7 +87,7 @@ fn handle_plus_activate(
     let job_row = parent_query.get(event.entity).unwrap().0;
     let job_kind = *job_kind_query.get(job_row).unwrap();
 
-    commands.trigger(AssignFollower {
+    commands.trigger(AssignFollowerRequest {
         job_kind,
     });
 }
@@ -93,7 +103,20 @@ fn handle_minus_activate(
     let job_row = parent_query.get(event.entity).unwrap().0;
     let job_kind = *job_kind_query.get(job_row).unwrap();
 
-    commands.trigger(UnassignFollower {
+    commands.trigger(UnassignFollowerRequest {
         job_kind,
     });
+}
+
+fn on_population_assigned_changed(
+    event: On<FollowerAssignedChange>,
+
+    job_kind_query: Query<(&JobKind, &Children), With<Node>>,
+
+    mut text_query: Query<&mut Text>,
+) {
+    let Some((_, ref children)) = job_kind_query.iter().find(|&(job_kind, _children)| *job_kind == event.job_kind) else { return; };
+
+    let mut text = text_query.get_mut(*children.first().expect("Job row node has children.")).expect("First child of the job row Node has text.");
+    text.0 = event.new_follower_count.to_string();
 }
