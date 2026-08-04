@@ -4,7 +4,7 @@ use bevy::ui_widgets::{Activate, Button};
 use crate::incremental::item::affixive_item::PushAffixError;
 use crate::incremental::item::equipment::Equipped;
 use crate::incremental::item::item_database::ItemDatabase;
-use crate::incremental::item::{item_slot::{ItemSlot, ItemSlotTag}, Crafted};
+use crate::incremental::item::{item_slot::{ItemSlot, ItemSlotTag}, craft::Crafted};
 use crate::incremental::item::{affixive_item::{AffixiveItem, ItemTag}};
 use crate::ui::log::LogMessage;
 use crate::ui::tooltip::{HideTooltip, ShowTooltip};

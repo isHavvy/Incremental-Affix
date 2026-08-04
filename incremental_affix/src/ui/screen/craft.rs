@@ -3,16 +3,15 @@
 use bevy::picking::hover::Hovered;
 use bevy::prelude::*;
 use bevy::ui_widgets::{Button, Activate};
+use itertools::Itertools;
 
-use crate::incremental::item::{base::Base, item_database::ItemDatabase, Crafted};
-use crate::incremental::stock::{StockKind, stockyard::Stockyard};
-use crate::ui::{item::spawn_item_details, log::LogMessage, tooltip};
+use crate::incremental::item::craft::{Craft, CraftRequest};
+use crate::incremental::item::item_database::ItemDatabase;
+use crate::ui::{item::spawn_item_details, tooltip};
 use super::Screen;
 
 pub fn crafting_screen() -> impl Scene {
-    let craft_base_buttons = const {
-        [Base::MakeshiftTools, Base::TestTools, Base::StoneTools, Base::WoodenHunt,]
-    }.into_iter()
+    let craft_base_buttons = Craft::starting_crafts()
     .map(craft_base_button)
     .collect::<Vec<_>>();
 
@@ -38,12 +37,15 @@ pub fn crafting_screen() -> impl Scene {
     }
 }
 
-fn craft_base_button(base: Base) -> impl Scene {
+fn craft_base_button(craft: Craft) -> impl Scene {
+    let contents = craft_base_button_text(&craft);
+
     bsn! {
         Node {
             display: Display::Flex,
+            flex_direction: FlexDirection::Column,
             border: UiRect::all(Val::Px(2.)),
-            height: Val::Px(25.0),
+            min_height: Val::Px(25.0),
             width: Val::Px(200.0),
             justify_content: JustifyContent::Center,
             align_items: AlignItems::Center,
@@ -51,7 +53,7 @@ fn craft_base_button(base: Base) -> impl Scene {
         }
         BorderColor::all(Color::BLACK)
 
-        template_value(base)
+        template_value(craft.clone())
 
         Button
         Hovered
@@ -60,63 +62,50 @@ fn craft_base_button(base: Base) -> impl Scene {
         on(handle_craft_button_out)
 
         Children [
-            Text::new(base.to_string())
-            TextColor::BLACK
+            { contents }
         ]
     }
+}
+
+fn craft_base_button_text(craft: &Craft) -> impl SceneList + use<> {
+    let mut scenes: Vec<Box<dyn Scene>> = Vec::with_capacity(3);
+
+    let base_text = craft.base.to_string();
+    let resource_text = craft.resources
+    .iter()
+    .map(|&(stock, amount)| format!("{} - {}", stock, amount))
+    .join("  ");
+
+    scenes.push(Box::new(bsn! {
+        Text::new(base_text)
+        TextColor::BLACK
+    }));
+
+    if craft.resources.len() > 0 {
+        scenes.push(Box::new(bsn! {
+            Node {
+                margin: UiRect::left(px(5))
+            }
+            Text::new(resource_text)
+            TextColor::BLACK
+            TextFont { font_size: px(12) }
+        }));
+    }
+
+    scenes
 }
 
 fn handle_craft_button_click(
     activate: On<Activate>,
     mut commands: Commands,
 
-    item_db: Res<ItemDatabase>,
-    mut stockyard: ResMut<Stockyard>,
-
-    mut messages: MessageWriter<LogMessage>,
-
-    base_query: Query<&Base>,
+    craft_query: Query<&Craft>,
 ) {
-    let base = base_query.get(activate.entity).expect("Craft button must have a base.");
+    let craft = craft_query.get(activate.entity).expect("Craft button must have a base.");
 
-    match base {
-        Base::MakeshiftTools => {
-            if stockyard[StockKind::BranchesAndPebbles] == 0.0 {
-                messages.write(LogMessage("Unable to craft. Missing branches and pebbles.".into()));
-                return;
-            }
-            stockyard[StockKind::BranchesAndPebbles] -= 1.0;
-        },
-
-        Base::TestTools => {},
-
-        Base::StoneTools => {
-            if stockyard[StockKind::Stone] < 5.0 || stockyard[StockKind::Wood] < 5.0 {
-                messages.write(LogMessage("Unable to craft stone tools. Need 5 stone and 5 wood.".into()));
-                return;
-            }
-
-            stockyard[StockKind::Stone] -= 5.0;
-            stockyard[StockKind::Wood] -= 5.0;
-        },
-
-        Base::WoodenHunt => {
-            if stockyard[StockKind::Wood] < 5.0 {
-                messages.write(LogMessage("Unable to craft wooden hunting weapon. Need 5 wood.".into()));
-                return;
-            }
-
-            stockyard[StockKind::Wood] -= 5.0;
-        }
-    }
-
-    let item = item_db.create_basic(*base);
-
-    let item_entity = commands.spawn((
-        item,
-    )).id();
-
-    commands.trigger(Crafted { crafted_item: item_entity });
+    commands.trigger(CraftRequest {
+        craft: craft.clone()
+    });
 }
 
 fn handle_craft_button_hover(
@@ -124,10 +113,10 @@ fn handle_craft_button_hover(
     mut commands: Commands,
 
     db: Res<ItemDatabase>,
-    base_query: Query<&Base>,
+    craft_query: Query<&Craft>,
 ) {
-    let base = *base_query.get(event.entity).expect("This handler can only be on an entity with an item base.");
-    let tooltip_content = spawn_item_details(commands.reborrow(), &db.create_basic(base));
+    let craft = craft_query.get(event.entity).expect("This handler can only be on an entity with an item base.");
+    let tooltip_content = spawn_item_details(commands.reborrow(), &db.create_basic(craft.base));
     commands.trigger(tooltip::ShowTooltip { content: tooltip_content });
 }
 

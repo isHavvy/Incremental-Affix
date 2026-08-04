@@ -4,6 +4,7 @@ pub mod affixive_item;
 pub mod modifier;
 pub mod base;
 pub mod item_database;
+pub mod craft;
 
 use bevy::prelude::*;
 
@@ -15,13 +16,10 @@ impl bevy::prelude::Plugin for ItemPlugin {
     fn build(&self, app: &mut App) {
         app
         .init_resource::<ItemDatabase>()
+
+        .add_plugins(craft::ItemCraftPlugin)
+
         .add_observer(equipment::on_equip)
         ;
     }
-}
-
-#[derive(Debug, Event)]
-pub struct Crafted {
-    /// Entity that contains the crafted affixive item as a component.
-    pub crafted_item: Entity,
 }
