@@ -188,7 +188,7 @@ impl ModifierKind {
 
 pub(crate) fn initialize_implicits() -> Vec<Implicit> {
     let mods = vec![
-        Affix::new("Tier0ToolsGatherWoodBase".to_string(), Modifier { kind: ModifierKind::WoodBase, min: 50, max: 50 }),
+        Affix::new("Tier0ToolsGatherWoodBase".to_string(), Modifier { kind: ModifierKind::WoodBase, min: 20, max: 20 }),
         Affix::new("Tier0ToolsGatherStoneBase".to_string(), Modifier { kind: ModifierKind::StoneBase, min: 50, max: 50 }),
         Affix::new("Tier1ToolsGatherWoodBase".to_string(), Modifier { kind: ModifierKind::WoodBase, min: 80, max: 120 }),
         Affix::new("Tier1ToolsGatherStoneBase".to_string(), Modifier { kind: ModifierKind::StoneBase, min: 80, max: 120 }),

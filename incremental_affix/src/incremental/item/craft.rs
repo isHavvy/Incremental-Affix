@@ -47,9 +47,10 @@ pub struct CraftRequest {
     pub craft: Craft,
 }
 
+/// Event for when an item has been crafted.
 #[derive(Debug, Event)]
 pub struct Crafted {
-    /// Entity that contains the crafted affixive item as a component.
+    /// Entity that contains the crafted [AffixiveItem] as a Component.
     pub crafted_item: Entity,
 }
 

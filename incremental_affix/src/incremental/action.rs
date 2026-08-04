@@ -5,12 +5,10 @@ use bevy::ecs::VariantDefaults;
 use bevy::prelude::*;
 use bevy::platform::collections::HashSet;
 
-use crate::incremental::action::change::ResetPlayerAction;
+pub use crate::incremental::action::change::ResetPlayerAction;
 use crate::incremental::action::spc::PlayerActionSpc;
 use crate::incremental::affinity::Affinity;
-use crate::incremental::ExplorationProgress;
 use crate::incremental::stock::producer_consumer::StockSystems;
-use crate::ui::log::LogMessage;
 use crate::incremental::stock::{StockKind, stockyard::Stockyard};
 
 pub use change::ChangeAction;
@@ -157,14 +155,15 @@ fn on_learn_action(
     known_actions.insert(event.action);
 }
 
+#[derive(Debug, Event)]
+pub struct Explore;
+
 fn progress_system(
     mut commands: Commands,
     time: Res<Time>,
     mut progress: ResMut<ActionProgress>,
     current_action: Res<CurrentAction>,
     mut stockyard: ResMut<Stockyard>,
-    mut exploration_progress: ResMut<ExplorationProgress>,
-    mut log_event_writer: MessageWriter<LogMessage>,
 ) {
     let current_action = match current_action.0 {
         None => return,
@@ -187,22 +186,7 @@ fn progress_system(
         // and not actions in general like this module should be.
         match current_action {
             Action::Explore => {
-                exploration_progress.0 += 1;
-
-                match exploration_progress.0 {
-                    0 => {},
-                    1 => {
-                        stockyard[StockKind::BranchesAndPebbles] += 1.0;
-                        log_event_writer.write(LogMessage("While exploring, you find some twigs and rocks on the ground.".to_string()));
-                        log_event_writer.write(LogMessage("Furthermore, you notice there's a lot of trees and exposed stone.".to_string()));
-                        log_event_writer.write(LogMessage("You get the idea to craft some makeshift tools to gather some wood and stone.".to_string()));
-
-                        commands.trigger(LearnAction { action: Action::GatherWood });
-                        commands.trigger(LearnAction { action: Action::GatherStone });
-                        commands.trigger(ResetPlayerAction);
-                    },
-                    _ => {}
-                }
+                commands.trigger(Explore);
             },
 
             Action::CreateFollowers => {
