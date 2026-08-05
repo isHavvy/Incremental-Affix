@@ -6,7 +6,7 @@ use crate::incremental::item::equipment::Equipped;
 use crate::incremental::item::item_database::ItemDatabase;
 use crate::incremental::item::{item_slot::{ItemSlot, ItemSlotTag}, craft::Crafted};
 use crate::incremental::item::{affixive_item::{AffixiveItem, ItemTag}};
-use crate::ui::log::LogMessage;
+use crate::incremental::log::LogEntry;
 use crate::ui::tooltip::{HideTooltip, ShowTooltip};
 use crate::ui::item::spawn_item_details;
 use crate::ui::screen::Screen;
@@ -105,14 +105,14 @@ pub fn on_item_craft(
 
     item_query: Query<&AffixiveItem>,
 
-    mut log_event_writer: MessageWriter<LogMessage>,
+    mut log_event_writer: MessageWriter<LogEntry>,
 ) {
     let item = item_query.get(event.crafted_item).unwrap();
     commands.spawn_scene(bsn! {
         inventory_item(event.crafted_item, item.name().to_string())
         ChildOf({ inventory_list.get() })
     });
-    log_event_writer.write(LogMessage(format!("Crafted '{}'", item.name())));
+    log_event_writer.write(LogEntry(format!("Crafted '{}'", item.name())));
 }
 
 pub fn inventory_item(item_entity: Entity, item_name: String) -> impl Scene {
@@ -203,7 +203,7 @@ fn on_activate_button_roll(
 
     db: Res<ItemDatabase>,
 
-    mut log_writer: MessageWriter<LogMessage>,
+    mut log_writer: MessageWriter<LogEntry>,
 
     parent_query: Query<&ChildOf>,
     corresponding_item_query: Query<&CorrespondingItem>,
@@ -219,20 +219,20 @@ fn on_activate_button_roll(
     match db.try_push_random_prefix(&mut item) {
         Ok(_) => {},
         Err(PushAffixError::AffixiveItemIsFixed) => {
-            log_writer.write(LogMessage::new("You cannot modify the affixes of this."));
+            log_writer.write(LogEntry::new("You cannot modify the affixes of this."));
         },
         Err(PushAffixError::AffixiveItemQualityTooLow) => {
-            log_writer.write(LogMessage::new("Cannot add prefix. Item quality too low."));
+            log_writer.write(LogEntry::new("Cannot add prefix. Item quality too low."));
         },
     }
 
     match db.try_push_random_suffix(&mut item) {
         Ok(_) => {},
         Err(PushAffixError::AffixiveItemIsFixed) => {
-            log_writer.write(LogMessage::new("You cannot modify the affixes of this."));
+            log_writer.write(LogEntry::new("You cannot modify the affixes of this."));
         },
         Err(PushAffixError::AffixiveItemQualityTooLow) => {
-            log_writer.write(LogMessage::new("Cannot add prefix. Item quality too low."));
+            log_writer.write(LogEntry::new("Cannot add prefix. Item quality too low."));
         },
     }
 }

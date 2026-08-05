@@ -3,7 +3,7 @@
 use bevy::prelude::*;
 use smallvec::{SmallVec, smallvec};
 
-use crate::{incremental::{item::item_database::ItemDatabase, stock::{StockKind, stockyard::Stockyard}}, ui::log::LogMessage};
+use crate::incremental::{item::item_database::ItemDatabase, log::LogEntry, stock::{StockKind, stockyard::Stockyard}};
 
 use super::base::Base;
 
@@ -61,7 +61,7 @@ fn on_craft_request(
     item_db: Res<ItemDatabase>,
     mut stockyard: ResMut<Stockyard>,
 
-    mut messages: MessageWriter<LogMessage>,
+    mut messages: MessageWriter<LogEntry>,
 ) {
     // This has_sufficient_stock code will hopefully be extraneous since the crafting UI
     // should not allow the buttons for crafting these to be pressed when there's not enough
@@ -70,7 +70,7 @@ fn on_craft_request(
     let has_sufficient_stock = event.craft.resources.iter().all(|&(stock_kind, amount)| stockyard[stock_kind] >= amount);
     
     if !has_sufficient_stock {
-        messages.write(LogMessage(format!("Unable to craft {}. Insufficient resources.", event.craft.base.to_string())));
+        messages.write(format!("Unable to craft {}. Insufficient resources.", event.craft.base.to_string()).into());
         return;
     }
 

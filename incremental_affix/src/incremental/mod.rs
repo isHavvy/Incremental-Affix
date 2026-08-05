@@ -12,6 +12,7 @@ pub mod stock;
 pub mod affinity;
 pub mod job;
 pub mod story;
+pub mod log;
 
 pub struct IncrementalPlugin;
 
@@ -28,6 +29,7 @@ impl Plugin for IncrementalPlugin {
         .insert_resource(TickTimer(Timer::from_seconds(const { 1.0 / Self::TICKS_PER_SECOND }, TimerMode::Repeating)))
 
         .add_plugins((
+            log::LogPlugin,
             story::StoryPlugin,
             action::ActionPlugin,
             stock::StockPlugin,

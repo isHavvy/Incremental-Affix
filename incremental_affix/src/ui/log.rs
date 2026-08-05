@@ -1,67 +1,56 @@
-//! Message log for the game.
+//! Message log UI
 
 use bevy::prelude::*;
+use bevy::ui_widgets::ScrollArea;
 
-pub struct GameLogPlugin;
+use crate::incremental::log::LogEntry;
 
-impl GameLogPlugin {
-    /// Builds the log UI and registers the the game log ui entity for the system.
-    /// 
-    /// Only call once in the application.
-    pub fn setup_log_ui(mut commands: Commands, parent: Entity) {
-        let log_ui = commands.spawn((
-            ChildOf(parent),
-            Node {
-                flex_direction: FlexDirection::Column,
-                ..default()
-            },
-            BackgroundColor(Color::srgb_u8(15, 15, 15)),
-        )).id();
+pub struct LogUiPlugin;
 
-        commands.insert_resource(LogUi(log_ui));
-    }
-}
-
-#[derive(Debug, Resource)]
-struct LogUi(Entity);
-
-impl LogUi {
-    fn entity(&self) -> Entity {
-        self.0
-    }
-}
-
-// #[TODO(Havvy)]: Move this LogMessage to crate::incremental::log::LogMessage.
-//                 Currently this is the only reference to crate::ui
-//                 from crate::incremental, and that dependency needs
-//                 to be broken.
-#[derive(Debug, Message)]
-pub struct LogMessage(pub String);
-
-impl LogMessage {
-    #[inline]
-    pub fn new(into_string: impl Into<String>) -> Self {
-        Self(into_string.into())
-    }
-}
-
-impl Plugin for GameLogPlugin {
+impl Plugin for LogUiPlugin {
     fn build(&self, app: &mut App) {
         app
-        .add_message::<LogMessage>()
         .add_systems(Update, (handle_log_event,));
     }
 }
 
+// #[TODO(Havvy)]: Implement scrollbars.
+/// Creates a scene for the log's UI.
+/// 
+/// This function should only ever be called once in a World.
+pub fn log_ui() -> impl Scene {
+    bsn! {
+        Node {
+            flex_direction: FlexDirection::Column,
+            max_height: px(256),
+            overflow: Overflow::scroll_y(),
+            scrollbar_width: 16.0,
+        }
+        BackgroundColor(Color::srgb_u8(15, 15, 15))
+        ScrollArea
+
+        LogUi
+
+        Children[]
+    }
+}
+
+#[derive(Debug, Clone, Default, Component)]
+#[require(Node, Children)]
+struct LogUi;
+
 fn handle_log_event(
     mut commands: Commands,
-    mut log_events: MessageReader<LogMessage>,
-    log_ui: Res<LogUi>,
+    mut log_events: MessageReader<LogEntry>,
+    log_ui_entity: Single<Entity, With<LogUi>>,
 ) {
-    for event in log_events.read() {
-        commands.spawn((
-            ChildOf(log_ui.entity()),
-            Text(event.0.clone())
-        ));
+    let log_ui_entity = *log_ui_entity;
+    let log_events = log_events.read().map(|lm| &lm.0).cloned();
+
+    for message in log_events {
+        commands.spawn_scene(bsn! {
+            ChildOf(log_ui_entity)
+            Text(message)
+        });
     }
 }

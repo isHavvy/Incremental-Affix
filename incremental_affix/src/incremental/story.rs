@@ -2,7 +2,7 @@
 
 use bevy::{ecs::observer::IntoObserver, prelude::*};
 
-use crate::{incremental::{action::{Action, Explore, LearnAction, ResetPlayerAction}, item::{affixive_item::AffixiveItem, base::Base, craft::Crafted}, stock::{StockKind, stockyard::Stockyard}}, ui::log::LogMessage};
+use crate::incremental::{action::{Action, Explore, LearnAction, ResetPlayerAction}, item::{affixive_item::AffixiveItem, base::Base, craft::Crafted}, log::LogEntry, stock::{StockKind, stockyard::Stockyard}};
 
 pub struct StoryPlugin;
 
@@ -44,14 +44,16 @@ fn on_first_explore(
     mut observers: Single<&mut StoryObservers>,
 
     mut stockyard: ResMut<Stockyard>,
-    mut log_event_writer: MessageWriter<LogMessage>,
+    mut log_event_writer: MessageWriter<LogEntry>,
 ) {
     observers.replace(commands.reborrow(), on_craft_makeshift_tools);
 
     stockyard[StockKind::BranchesAndPebbles] += 1.0;
-    log_event_writer.write(LogMessage("While exploring, you find some twigs and rocks on the ground.".to_string()));
-    log_event_writer.write(LogMessage("Furthermore, you notice there's a lot of trees and exposed stone.".to_string()));
-    log_event_writer.write(LogMessage("You get the idea to craft some makeshift tools to gather some wood and stone.".to_string()));
+    log_event_writer.write(LogEntry::from([
+        "While exploring, you find some twigs and rocks on the ground.",
+        "Furthermore, you notice there's a lot of trees and exposed stone.",
+        "You get the idea to craft some makeshift tools to gather some wood and stone."
+    ]));
 
     commands.trigger(LearnAction { action: Action::GatherWood });
     commands.trigger(LearnAction { action: Action::GatherStone });
@@ -65,7 +67,7 @@ fn on_craft_makeshift_tools(
 
     item_query: Query<&AffixiveItem>,
 
-    mut log_event_writer: MessageWriter<LogMessage>,
+    mut log_event_writer: MessageWriter<LogEntry>,
 ) {
     let item = item_query.get(event.crafted_item).expect("Entity for Crafted event must have an AffixiveItem component.");
 
@@ -76,8 +78,10 @@ fn on_craft_makeshift_tools(
 
     observers.clear(commands);
     
-    log_event_writer.write(LogMessage("You sit down and cobble together some makeshift logging and mining tools using the sticks and pebbles laying around.".to_string()));
-    log_event_writer.write(LogMessage("You weren't expecting the materials to make good tools, but they came out much more effective than you anticipated.".to_string()));
-    log_event_writer.write(LogMessage("It seems you are quite the toolmaker. But that doesn't help you remember who you are.".to_string()));
-    log_event_writer.write(LogMessage("At least now you can acquire wood and stone. Perhaps even use those to make better tools.".to_string()));
+    log_event_writer.write(LogEntry::from([
+        "You sit down and cobble together some makeshift logging and mining tools using the sticks and pebbles laying around.",
+        "You weren't expecting the materials to make good tools, but they came out much more effective than you anticipated.",
+        "It seems you are quite the toolmaker. But that doesn't help you remember who you are.",
+        "At least now you can acquire wood and stone. Perhaps even use those to make better tools.",
+    ]));
 }

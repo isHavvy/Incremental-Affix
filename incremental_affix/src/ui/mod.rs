@@ -34,7 +34,7 @@ fn setup(
     asset_server: Res<AssetServer>,
     known_actions: Res<KnownActions>,
 ) {
-    let font = asset_server.load::<Font>("fonts/FiraSans-Bold.ttf");
+    let font = asset_server.load("fonts/FiraSans-Bold.ttf");
 
     commands.spawn(Camera2d);
 
@@ -86,5 +86,8 @@ fn setup(
     screen1.insert(ChildOf(right_of_sidebar));
     let mut screen2 = commands.queue_spawn_scene(screen2);
     screen2.insert(ChildOf(right_of_sidebar));
-    log::GameLogPlugin::setup_log_ui(commands, right_of_sidebar);
+    commands.queue_spawn_scene(bsn!{
+        log::log_ui()
+        ChildOf(right_of_sidebar)
+    });
 }

@@ -2,7 +2,6 @@ mod incremental;
 mod stats_builder;
 mod ui;
 
-//use bevy::fps_overlay::{FpsOverlayConfig, FpsOverlayPlugin, FrameTimeGraphConfig};
 use bevy::prelude::*;
 
 fn main() {
@@ -12,21 +11,9 @@ fn main() {
 
         incremental::IncrementalPlugin,
 
-        ui::log::GameLogPlugin,
+        ui::log::LogUiPlugin,
         ui::tooltip::TooltipPlugin,
         ui::UiPlugin,
-
-        // FpsOverlayPlugin {
-        //     config: FpsOverlayConfig {
-        //         enabled: false,
-        //         text_color: Color::BLACK,
-        //         frame_time_graph_config: FrameTimeGraphConfig {
-        //             enabled: false,
-        //             ..default()
-        //         },
-        //         ..default()
-        //     }
-        // },
     ))
     .run();
 }
