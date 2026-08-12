@@ -9,7 +9,7 @@ pub struct StoryPlugin;
 impl Plugin for StoryPlugin {
     fn build(&self, app: &mut App) {
         app
-        .add_systems(Startup, setup)
+        .add_systems(Startup, setup.in_set(super::IncrementalStartupSystemSet))
         ;
     }
 }

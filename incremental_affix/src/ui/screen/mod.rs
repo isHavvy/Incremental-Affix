@@ -4,6 +4,7 @@ use bevy::text::FontSourceTemplate;
 use bevy::ui_widgets::{Activate, Button};
 
 use crate::incremental::action::KnownActions;
+use crate::ui::screen::craft::RecipeEntityQuery;
 
 pub mod action;
 pub mod craft;
@@ -35,7 +36,10 @@ impl std::fmt::Display for Screen {
     }
 }
 
-pub fn screens_ui(known_actions: Res<KnownActions>) -> (impl Scene, impl Scene) {
+pub fn screens_ui(
+    known_actions: Res<KnownActions>,
+    recipe_query: RecipeEntityQuery,
+) -> (impl Scene, impl Scene) {
     (
         bsn! {
             #ScreenSelectBar
@@ -60,7 +64,7 @@ pub fn screens_ui(known_actions: Res<KnownActions>) -> (impl Scene, impl Scene) 
 
             Children [
                 action::actions_screen(known_actions),
-                craft::crafting_screen(),
+                craft::crafting_screen(recipe_query),
                 inventory::inventory_screen(),
                 population::population_screen(),
             ]

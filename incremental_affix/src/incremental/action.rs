@@ -5,6 +5,7 @@ use bevy::ecs::VariantDefaults;
 use bevy::prelude::*;
 use bevy::platform::collections::HashSet;
 
+use crate::incremental::IncrementalStartupSystemSet;
 pub use crate::incremental::action::change::ResetPlayerAction;
 use crate::incremental::action::spc::PlayerActionSpc;
 use crate::incremental::affinity::Affinity;
@@ -31,7 +32,7 @@ impl Plugin for ActionPlugin {
         .add_observer(on_learn_action)
         .add_observer(change::on_change_action)
         .add_observer(change::on_reset_player_action)
-        .add_systems(Startup, spc::initialize_action_spc)
+        .add_systems(Startup, spc::initialize_action_spc.in_set(IncrementalStartupSystemSet))
         .add_systems(FixedUpdate, (progress_system, affinity_check_system))
         .add_systems(FixedUpdate, spc::preconsume.in_set(StockSystems::PreConsume))
         .add_systems(FixedUpdate, spc::postconsume.in_set(StockSystems::PostConsume))

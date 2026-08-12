@@ -5,16 +5,38 @@ use bevy::prelude::*;
 use bevy::ui_widgets::{Button, Activate};
 use itertools::Itertools;
 
-use crate::incremental::item::craft::{Craft, CraftRequest};
+use crate::incremental::item::craft::{Recipe, CraftRequest};
 use crate::incremental::item::item_database::ItemDatabase;
 use crate::ui::{item::spawn_item_details, tooltip};
 use super::Screen;
 
-pub fn crafting_screen() -> impl Scene {
-    let craft_base_buttons = Craft::starting_crafts()
-    .map(craft_base_button)
-    .collect::<Vec<_>>();
+pub struct CraftScreenPlugin;
 
+impl Plugin for CraftScreenPlugin {
+    fn build(&self, app: &mut App) {
+        app
+        .register_system(on_new_recipe)
+        ;
+    }
+}
+
+pub type RecipeEntityQuery<'a, 'b, 'c> = Query<'a, 'b, (Entity, &'c Recipe)>;
+
+/// Marker component for the [Node] that contains the recipe craft buttons
+#[derive(Debug, Clone, Copy, Default, Component)]
+struct CraftList;
+
+#[derive(Debug, Clone, Component, FromTemplate)]
+#[relationship(relationship_target = CorrespondingCraftButton)]
+pub struct CraftButtonOf(pub Entity);
+
+#[derive(Debug, Clone, Component)]
+#[relationship_target(relationship = CraftButtonOf)]
+pub struct CorrespondingCraftButton(Entity);
+
+pub fn crafting_screen(
+    recipe_query: RecipeEntityQuery,
+) -> impl Scene {
     bsn! {
         Node {
             display: Display::None,
@@ -32,13 +54,28 @@ pub fn crafting_screen() -> impl Scene {
                 TextFont { font_size: px(32.0) }
             ],
 
-            { craft_base_buttons }
+            // ---
+
+            Node
+            CraftList
+            Children [
+                { starting_craft_buttons(recipe_query) }
+            ]
         ]
     }
 }
 
-fn craft_base_button(craft: Craft) -> impl Scene {
-    let contents = craft_base_button_text(&craft);
+fn starting_craft_buttons(
+    recipe_query: RecipeEntityQuery,
+) -> impl SceneList + use<> {
+    recipe_query
+    .iter()
+    .map(|(entity, recipe)| craft_base_button(entity, recipe))
+    .collect::<Vec<_>>()
+}
+
+fn craft_base_button(recipe_entity: Entity, recipe: &Recipe) -> impl Scene + use<> {
+    let contents = craft_base_button_text(&recipe);
 
     bsn! {
         Node {
@@ -53,25 +90,24 @@ fn craft_base_button(craft: Craft) -> impl Scene {
         }
         BorderColor::all(Color::BLACK)
 
-        template_value(craft.clone())
-
         Button
         Hovered
         on(handle_craft_button_click)
         on(handle_craft_button_hover)
         on(handle_craft_button_out)
 
+        CraftButtonOf(recipe_entity)
         Children [
             { contents }
         ]
     }
 }
 
-fn craft_base_button_text(craft: &Craft) -> impl SceneList + use<> {
+fn craft_base_button_text(recipe: &Recipe) -> impl SceneList + use<> {
     let mut scenes: Vec<Box<dyn Scene>> = Vec::with_capacity(3);
 
-    let base_text = craft.base.to_string();
-    let resource_text = craft.resources
+    let base_text = recipe.base.to_string();
+    let resource_text = recipe.resources
     .iter()
     .map(|&(stock, amount)| format!("{} - {}", stock, amount))
     .join("  ");
@@ -81,7 +117,7 @@ fn craft_base_button_text(craft: &Craft) -> impl SceneList + use<> {
         TextColor::BLACK
     }));
 
-    if craft.resources.len() > 0 {
+    if recipe.resources.len() > 0 {
         scenes.push(Box::new(bsn! {
             Node {
                 margin: UiRect::left(px(5))
@@ -96,16 +132,14 @@ fn craft_base_button_text(craft: &Craft) -> impl SceneList + use<> {
 }
 
 fn handle_craft_button_click(
-    activate: On<Activate>,
+    event: On<Activate>,
     mut commands: Commands,
 
-    craft_query: Query<&Craft>,
+    craft_button_of_query: Query<&CraftButtonOf>,
 ) {
-    let craft = craft_query.get(activate.entity).expect("Craft button must have a base.");
+    let recipe = craft_button_of_query.get(event.entity).expect("Craft button must have CraftButtonOf component.").0;
 
-    commands.trigger(CraftRequest {
-        craft: craft.clone()
-    });
+    commands.trigger(CraftRequest { recipe });
 }
 
 fn handle_craft_button_hover(
@@ -113,10 +147,14 @@ fn handle_craft_button_hover(
     mut commands: Commands,
 
     db: Res<ItemDatabase>,
-    craft_query: Query<&Craft>,
+
+    craft_button_of_query: Query<&CraftButtonOf>,
+    recipe_query: Query<&Recipe>,
 ) {
-    let craft = craft_query.get(event.entity).expect("This handler can only be on an entity with an item base.");
-    let tooltip_content = spawn_item_details(commands.reborrow(), &db.create_basic(craft.base));
+    let recipe = craft_button_of_query.get(event.entity).expect("Craft button must have CraftButtonOf component.").0;
+    let recipe = recipe_query.get(recipe).expect("Entity of CraftButtonOf must have a Recipe component.");
+
+    let tooltip_content = spawn_item_details(commands.reborrow(), &db.create_basic(recipe.base));
     commands.trigger(tooltip::ShowTooltip { content: tooltip_content });
 }
 
@@ -125,4 +163,18 @@ fn handle_craft_button_out(
     mut commands: Commands,
 ) {
     commands.trigger(tooltip::HideTooltip);
+}
+
+fn on_new_recipe(
+    mut commands: Commands,
+
+    recipe_query: Query<(Entity, &Recipe), Added<Recipe>>,
+    craft_list: Single<Entity, With<CraftList>>,
+) {
+    for (entity, recipe) in recipe_query.iter() {
+        commands.spawn_scene(bsn! {
+            craft_base_button(entity, recipe)
+            ChildOf({ *craft_list })
+        });
+    }
 }

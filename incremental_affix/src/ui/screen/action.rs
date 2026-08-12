@@ -1,6 +1,6 @@
 use std::fmt::Write as _;
 
-use bevy::color::palettes::css::{self, GRAY};
+use bevy::color::palettes::css::{LIMEGREEN, GRAY};
 use bevy::ui::InteractionDisabled;
 use bevy::ui_widgets::Activate;
 use bevy::prelude::*;
@@ -105,7 +105,7 @@ fn action_bar() -> impl Scene {
                 top: percent(67),
                 height: percent(33),
             }
-            BackgroundColor(css::LIMEGREEN)
+            BackgroundColor(LIMEGREEN)
             ZIndex(1),
 
             #Text

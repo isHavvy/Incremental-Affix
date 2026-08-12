@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::incremental::stock::StockPerSecond;
 use crate::incremental::stock::producer_consumer::StockSystems;
 use crate::incremental::stock::{StockKind, producer_consumer::StockyardProducerConsumer, stockyard::Stockyard};
-use crate::incremental::PerSecond;
+use crate::incremental::{IncrementalStartupSystemSet, PerSecond};
 
 mod spc;
 
@@ -15,7 +15,7 @@ impl Plugin for JobsPlugin {
     fn build(&self, app: &mut App) {
         app
         .init_resource::<FollowersAssigned>()
-        .add_systems(Startup, initialize_jobs)
+        .add_systems(Startup, initialize_jobs.in_set(IncrementalStartupSystemSet))
         .add_systems(FixedUpdate, (
             spc::preconsume.in_set(StockSystems::PreConsume),
             spc::postconsume.in_set(StockSystems::PostConsume),

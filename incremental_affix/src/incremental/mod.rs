@@ -14,6 +14,9 @@ pub mod job;
 pub mod story;
 pub mod log;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
+pub struct IncrementalStartupSystemSet;
+
 pub struct IncrementalPlugin;
 
 impl IncrementalPlugin {

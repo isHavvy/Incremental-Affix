@@ -10,7 +10,7 @@ use bevy::ecs::VariantDefaults;
 use bevy::prelude::*;
 
 use crate::incremental::stock::stockyard::{tick_stockyard_system, Stockyard};
-use crate::incremental::{IncrementalPlugin, PerSecond};
+use crate::incremental::{IncrementalPlugin, IncrementalStartupSystemSet, PerSecond};
 use crate::incremental::stock::producer_consumer::{consume_modifiers, init_follower_stockyard_producer_consumer, produce_modifiers, update_follower_modifier, StockSystems};
 
 pub mod producer_consumer;
@@ -22,7 +22,7 @@ impl Plugin for StockPlugin {
     fn build(&self, app: &mut App) {
         app
         .init_resource::<Stockyard>()
-        .add_systems(Startup, init_follower_stockyard_producer_consumer)
+        .add_systems(Startup, init_follower_stockyard_producer_consumer.in_set(IncrementalStartupSystemSet))
         .add_systems(FixedUpdate, tick_stockyard_system)
         .add_systems(FixedUpdate, consume_modifiers.in_set(StockSystems::Consume))
         .add_systems(FixedUpdate, update_follower_modifier.in_set(StockSystems::PostConsume).after(StockSystems::Consume))
