@@ -7,7 +7,6 @@ pub mod item;
 use bevy::prelude::*;
 
 use crate::incremental::action::KnownActions;
-use crate::ui::screen::craft::RecipeEntityQuery;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
 pub struct UiSetupSystemSet;
@@ -39,7 +38,6 @@ fn setup(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     known_actions: Res<KnownActions>,
-    recipe_query: RecipeEntityQuery,
 ) {
     let font = asset_server.load("fonts/FiraSans-Bold.ttf");
 
@@ -88,7 +86,7 @@ fn setup(
     )).id();
 
     stocks::spawn_stocks_ui(&mut commands, sidebar, font.clone());
-    let(screen1, screen2) = screen::screens_ui(known_actions, recipe_query);
+    let(screen1, screen2) = screen::screens_ui(known_actions);
     let mut screen1 = commands.queue_spawn_scene(screen1);
     screen1.insert(ChildOf(right_of_sidebar));
     let mut screen2 = commands.queue_spawn_scene(screen2);

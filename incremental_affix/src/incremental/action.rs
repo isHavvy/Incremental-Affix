@@ -135,7 +135,6 @@ impl Default for KnownActions {
     fn default() -> Self {
         let mut set = HashSet::new();
         set.insert(Action::Explore);
-        set.insert(Action::CreateFollowers);
         set.insert(Action::Hunt);
         set.insert(Action::RenderCarcass);
         set.insert(Action::CookMeat);

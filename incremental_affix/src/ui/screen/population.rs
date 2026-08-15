@@ -3,7 +3,7 @@ use bevy::prelude::*;
 use bevy::ui_widgets::{Activate, Button};
 
 use crate::incremental::job::{AssignFollowerRequest, FollowerAssignedChange, JobKind, UnassignFollowerRequest};
-use crate::ui::screen::Screen;
+use crate::ui::screen::{Screen, screen_title};
 
 pub struct PopulationScreenPlugin;
 
@@ -26,6 +26,8 @@ pub fn population_screen() -> impl Scene {
         Screen::Population
 
         Children [
+            screen_title("Jobs"),
+            // ---
             { JobKind::LIST.iter().copied().map(job_row).collect::<Vec<_>>() }
         ]
     }

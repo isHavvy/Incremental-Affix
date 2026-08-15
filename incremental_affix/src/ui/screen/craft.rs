@@ -7,6 +7,7 @@ use itertools::Itertools;
 
 use crate::incremental::item::craft::{Recipe, CraftRequest};
 use crate::incremental::item::item_database::ItemDatabase;
+use crate::ui::screen::screen_title;
 use crate::ui::{item::spawn_item_details, tooltip};
 use super::Screen;
 
@@ -15,12 +16,10 @@ pub struct CraftScreenPlugin;
 impl Plugin for CraftScreenPlugin {
     fn build(&self, app: &mut App) {
         app
-        .register_system(on_new_recipe)
+        .add_systems(Update, on_new_recipe)
         ;
     }
 }
-
-pub type RecipeEntityQuery<'a, 'b, 'c> = Query<'a, 'b, (Entity, &'c Recipe)>;
 
 /// Marker component for the [Node] that contains the recipe craft buttons
 #[derive(Debug, Clone, Copy, Default, Component)]
@@ -34,9 +33,7 @@ pub struct CraftButtonOf(pub Entity);
 #[relationship_target(relationship = CraftButtonOf)]
 pub struct CorrespondingCraftButton(Entity);
 
-pub fn crafting_screen(
-    recipe_query: RecipeEntityQuery,
-) -> impl Scene {
+pub fn crafting_screen() -> impl Scene {
     bsn! {
         Node {
             display: Display::None,
@@ -49,29 +46,16 @@ pub fn crafting_screen(
         Children [
             Node
             Children [
-                Text::new("Craft")
-                TextColor::BLACK
-                TextFont { font_size: px(32.0) }
+                screen_title("Craft")
             ],
 
             // ---
 
             Node
             CraftList
-            Children [
-                { starting_craft_buttons(recipe_query) }
-            ]
+            Children []
         ]
     }
-}
-
-fn starting_craft_buttons(
-    recipe_query: RecipeEntityQuery,
-) -> impl SceneList + use<> {
-    recipe_query
-    .iter()
-    .map(|(entity, recipe)| craft_base_button(entity, recipe))
-    .collect::<Vec<_>>()
 }
 
 fn craft_base_button(recipe_entity: Entity, recipe: &Recipe) -> impl Scene + use<> {
@@ -172,6 +156,7 @@ fn on_new_recipe(
     craft_list: Single<Entity, With<CraftList>>,
 ) {
     for (entity, recipe) in recipe_query.iter() {
+        eprintln!("Found a recipe");
         commands.spawn_scene(bsn! {
             craft_base_button(entity, recipe)
             ChildOf({ *craft_list })

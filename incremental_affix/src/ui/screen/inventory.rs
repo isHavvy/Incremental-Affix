@@ -9,7 +9,7 @@ use crate::incremental::item::{affixive_item::{AffixiveItem, ItemTag}};
 use crate::incremental::log::LogEntry;
 use crate::ui::tooltip::{HideTooltip, ShowTooltip};
 use crate::ui::item::spawn_item_details;
-use crate::ui::screen::Screen;
+use crate::ui::screen::{Screen, screen_title};
 
 #[derive(Debug, Clone, Component, FromTemplate)]
 pub struct InventoryList(Entity);
@@ -38,6 +38,10 @@ pub fn inventory_screen() -> impl Scene {
         InventoryList(#InventoryList)
 
         Children [
+            screen_title("Inventory"),
+
+            // --
+
             (
                 #Slots
                 Node {
@@ -54,6 +58,8 @@ pub fn inventory_screen() -> impl Scene {
                     slot(ItemSlotTag::Hunt),
                 ]
             ),
+
+            // ---
 
             #InventoryList
             Node {

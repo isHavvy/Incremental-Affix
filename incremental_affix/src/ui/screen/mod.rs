@@ -4,7 +4,6 @@ use bevy::text::FontSourceTemplate;
 use bevy::ui_widgets::{Activate, Button};
 
 use crate::incremental::action::KnownActions;
-use crate::ui::screen::craft::RecipeEntityQuery;
 
 pub mod action;
 pub mod craft;
@@ -38,7 +37,6 @@ impl std::fmt::Display for Screen {
 
 pub fn screens_ui(
     known_actions: Res<KnownActions>,
-    recipe_query: RecipeEntityQuery,
 ) -> (impl Scene, impl Scene) {
     (
         bsn! {
@@ -64,7 +62,7 @@ pub fn screens_ui(
 
             Children [
                 action::actions_screen(known_actions),
-                craft::crafting_screen(recipe_query),
+                craft::crafting_screen(),
                 inventory::inventory_screen(),
                 population::population_screen(),
             ]
@@ -110,5 +108,13 @@ pub fn on_activate_button_screen_change(
 
     for (mut screen_node, screen) in &mut screen_node_query {
         screen_node.display = if screen == next_visible_screen { Display::Block } else { Display::None };
+    }
+}
+
+fn screen_title(title: &'static str) -> impl Scene {
+    bsn! {
+        Text::new(title)
+        TextColor::BLACK
+        TextFont { font_size: px(32.0) }
     }
 }

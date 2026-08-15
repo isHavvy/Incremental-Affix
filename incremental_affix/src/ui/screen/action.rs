@@ -8,7 +8,7 @@ use bevy::ui_widgets::Button;
 
 use crate::incremental::action::{Action, ActionAffinity, ActionProgress, ChangeAction, CurrentAction, KnownActions, LearnAction, NO_CURRENT_ACTION_DISPLAY};
 use crate::incremental::stats::PlayerActionsStats;
-use crate::ui::screen::Screen;
+use crate::ui::screen::{Screen, screen_title};
 
 const BUTTON_ENABLED_COLOR: Color = Color::BLACK;
 const BUTTON_DISABLED_COLOR: Color = Color::Srgba(GRAY);
@@ -59,6 +59,7 @@ pub fn actions_screen(known_actions: Res<KnownActions>) -> impl Scene {
         Screen::Act
 
         Children [
+            screen_title("Actions")
             action_bar(),
             { action_buttons }
         ]
