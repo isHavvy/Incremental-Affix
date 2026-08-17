@@ -2,7 +2,7 @@
 
 use bevy::{ecs::observer::IntoObserver, prelude::*};
 
-use crate::incremental::{action::{Action, Explore, LearnAction, ResetPlayerAction}, item::{affixive_item::AffixiveItem, base::Base, craft::{Crafted, Recipe}}, log::LogEntry, stock::{StockKind, stockyard::Stockyard}};
+use crate::incremental::{action::{Action, Explore, LearnAction, ResetPlayerAction}, item::{affixive_item::AffixiveItem, base::Base, craft::{Crafted, Recipe}}, log::LogEntry, stock::{StockKind, on_total::OnStockTotalProduced, stockyard::Stockyard}};
 
 pub struct StoryPlugin;
 
@@ -38,6 +38,13 @@ fn setup(mut commands: Commands) {
     commands.spawn(StoryObservers {
         observer: on_first_explore,
         count: 0,
+    });
+
+    let system_id = commands.register_system(on_five_stone_mined);
+    commands.spawn(OnStockTotalProduced {
+        stock_kind: StockKind::Stone,
+        total_produced: 5.0,
+        on_total_produced: system_id,
     });
 }
 
@@ -165,4 +172,12 @@ fn on_second_explore(
 
         _ => { /* do nothing */}
     }
+}
+
+fn on_five_stone_mined(
+    mut stockyard: ResMut<Stockyard>,
+    mut log_event_writer: MessageWriter<LogEntry>,
+) {
+    stockyard[StockKind::Diamond] += 1.0;
+    log_event_writer.write(LogEntry("While mining stone, you notice a diamond.".to_string()));
 }

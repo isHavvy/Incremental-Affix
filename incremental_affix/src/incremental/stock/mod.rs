@@ -15,6 +15,7 @@ use crate::incremental::stock::producer_consumer::{consume_modifiers, init_follo
 
 pub mod producer_consumer;
 pub mod stockyard;
+pub mod on_total;
 
 pub struct StockPlugin;
 
@@ -23,7 +24,7 @@ impl Plugin for StockPlugin {
         app
         .init_resource::<Stockyard>()
         .add_systems(Startup, init_follower_stockyard_producer_consumer.in_set(IncrementalStartupSystemSet))
-        .add_systems(FixedUpdate, tick_stockyard_system)
+        .add_systems(FixedUpdate, (tick_stockyard_system, on_total::on_stock_total_firer))
         .add_systems(FixedUpdate, consume_modifiers.in_set(StockSystems::Consume))
         .add_systems(FixedUpdate, update_follower_modifier.in_set(StockSystems::PostConsume).after(StockSystems::Consume))
         .add_systems(FixedUpdate, produce_modifiers.in_set(StockSystems::Produce).after(StockSystems::PostConsume))
@@ -38,8 +39,12 @@ pub enum StockKind {
     // It's currently here to show up in the resources sidebar.
     #[default]
     BranchesAndPebbles,
+
     Godpower,
     Followers,
+
+    Diamond,
+
     Wood,
     Stone,
     Carcass,
@@ -53,6 +58,7 @@ impl StockKind {
         Self::BranchesAndPebbles,
         Self::Godpower,
         Self::Followers,
+        Self::Diamond,
         Self::Wood,
         Self::Stone,
         Self::Carcass,
@@ -68,6 +74,7 @@ impl std::fmt::Display for StockKind {
             StockKind::BranchesAndPebbles => "Branches and Pebbles",
             StockKind::Godpower => "Godpower",
             StockKind::Followers => "Followers",
+            StockKind::Diamond => "Diamonds",
             StockKind::Wood => "Wood",
             StockKind::Stone => "Stone",
             StockKind::Carcass => "Carcasses",
@@ -85,6 +92,9 @@ pub struct Stock {
     current: f64,
     maximum: Option<f64>,
 
+    /// Sum of produced stock over the entire game
+    total_produced: f64,
+
     /// Whether or not the stock has changed since `has_changed`
     /// 
     /// Both changes to the actual value and changes to the change per tick
@@ -98,6 +108,8 @@ impl Stock {
         Self {
             current,
             maximum,
+
+            total_produced: 0.0,
 
             has_changed: true,
         }
@@ -125,8 +137,13 @@ impl AddAssign<f64> for Stock {
     fn add_assign(&mut self, change: f64) {
         if change == 0.0 { return; }
 
+        let original = self.current;
+        let new = f64::clamp(self.current + change, 0.0, self.maximum.unwrap_or(f64::MAX));
+        let difference = new - original;
+
         self.has_changed = true;
-        self.current = f64::clamp(self.current + change, 0.0, self.maximum.unwrap_or(f64::MAX));
+        self.current = new;
+        self.total_produced += difference;
     }
 }
 

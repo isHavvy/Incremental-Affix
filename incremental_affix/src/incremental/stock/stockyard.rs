@@ -21,12 +21,13 @@ impl Stockyard {
 
 impl Default for Stockyard {
     fn default() -> Self {
-        // This match exists to throw an error when a new stock kind is added.
+        // This match exists to trigger a compiler error when a new stock kind is added.
         // That way we don't forget to add the stock to the stocks hashmap below.
         match StockKind::Godpower {
             StockKind::BranchesAndPebbles => {},
             StockKind::Godpower => {},
             StockKind::Followers => {},
+            StockKind::Diamond => {},
             StockKind::Wood => {},
             StockKind::Stone => {},
             StockKind::Carcass => {},
@@ -38,8 +39,12 @@ impl Default for Stockyard {
         let mut stocks = HashMap::new();
 
         stocks.insert(StockKind::BranchesAndPebbles, Stock::new(0.0, None));
+
         stocks.insert(StockKind::Godpower, Stock::new(10.0, None));
         stocks.insert(StockKind::Followers, Stock::new(0.0, Some(10.0)));
+
+        stocks.insert(StockKind::Diamond, Stock::new(0.0, Some(100.0)));
+
         stocks.insert(StockKind::Wood, Stock::new(0.0, Some(100.0)));
         stocks.insert(StockKind::Stone, Stock::new(0.0, Some(100.0)));
         stocks.insert(StockKind::Carcass, Stock::new(0.0, Some(10.0)));
