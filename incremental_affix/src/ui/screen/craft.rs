@@ -156,7 +156,6 @@ fn on_new_recipe(
     craft_list: Single<Entity, With<CraftList>>,
 ) {
     for (entity, recipe) in recipe_query.iter() {
-        eprintln!("Found a recipe");
         commands.spawn_scene(bsn! {
             craft_base_button(entity, recipe)
             ChildOf({ *craft_list })

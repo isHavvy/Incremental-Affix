@@ -59,7 +59,7 @@ pub fn actions_screen(known_actions: Res<KnownActions>) -> impl Scene {
         Screen::Act
 
         Children [
-            screen_title("Actions")
+            screen_title("Actions"),
             action_bar(),
             { action_buttons }
         ]

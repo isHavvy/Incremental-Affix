@@ -174,7 +174,7 @@ impl ModifierKind {
             ModifierKind::StoneMultiplier => format!("{}{}% Stone mined per second", sign(actual), actual),
             ModifierKind::StoneAffinityChanceMultiplier => format!("{}{} Stone affinity chance", sign(actual), actual),
             ModifierKind::StoneAffinityMultiplier => format!("{}{}% Stone affinity gain", sign(actual), actual),
-            ModifierKind::StoneAffinityTimeMultiplier => format!("{}{}% Sone affinity time", sign(actual), actual),
+            ModifierKind::StoneAffinityTimeMultiplier => format!("{}{}% Stone affinity time", sign(actual), actual),
 
             ModifierKind::ToolMultiplier => format!("Tool actions produce {}{}% additional resources per second", sign(actual), actual),
             ModifierKind::ToolAffinityChanceMultiplier => format!("{}{} Tool action affinity chance", sign(actual), percent(actual)),
