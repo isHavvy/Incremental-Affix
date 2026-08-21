@@ -1,4 +1,5 @@
-use std::ops::{Deref, DerefMut, Mul, Neg};
+use std::{iter::Sum, ops::{Deref, DerefMut, Mul, Neg}};
+use std::fmt::Display;
 
 use bevy::prelude::*;
 
@@ -26,7 +27,6 @@ impl IncrementalPlugin {
 impl Plugin for IncrementalPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app
-        .init_resource::<ExplorationProgress>()
         .init_resource::<PlayerActionsStats>()
         .init_resource::<ItemDatabase>()
         .insert_resource(TickTimer(Timer::from_seconds(const { 1.0 / Self::TICKS_PER_SECOND }, TimerMode::Repeating)))
@@ -43,10 +43,6 @@ impl Plugin for IncrementalPlugin {
         ;
     }
 }
-
-/// For the early game Explore action.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Resource)]
-pub struct ExplorationProgress(u32);
 
 #[derive(Resource)]
 struct TickTimer(Timer);
@@ -84,6 +80,13 @@ impl Neg for PerSecond {
     }
 }
 
+impl Sum<PerSecond> for PerSecond {
+    fn sum<I: Iterator<Item = PerSecond>>(iter: I) -> Self {
+        iter.fold(0.per_second(), |lhs, rhs| Self(lhs.0 + rhs.0))
+    }
+}
+
+/// This trait adds a `.per_second()` method as an alias for `.into::<PerSecond>()`.
 pub trait DotPerSecond {
     fn per_second(self) -> PerSecond;
 }
@@ -115,5 +118,15 @@ impl From<f64> for PerSecond {
 impl PerSecond {
     pub fn per_tick(&self) -> f64 {
         self.0 / IncrementalPlugin::TICKS_PER_SECOND as f64
+    }
+}
+
+impl Display for PerSecond {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.0 == 0.0 {
+            return Ok(());
+        } else {
+            write!(f, "{:+.2}/s", self.0)
+        }
     }
 }

@@ -37,7 +37,7 @@ impl std::fmt::Display for Screen {
 
 pub fn screens_ui(
     known_actions: Res<KnownActions>,
-) -> (impl Scene, impl Scene) {
+) -> impl SceneList {
     (
         bsn! {
             #ScreenSelectBar

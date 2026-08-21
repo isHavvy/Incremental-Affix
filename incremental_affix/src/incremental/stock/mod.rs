@@ -182,6 +182,7 @@ impl PartialOrd<u32> for Stock {
 
 /// Reading stock values to strings.
 impl Stock {
+    #[allow(unused)]
     /// Push to a string the amount of stock is held and the maximum.
     pub fn push_str_current_and_maximum(&self, string: &mut String) {
         let _ = write!(string, "{:0>2.2}", self.current);
@@ -191,6 +192,11 @@ impl Stock {
         }
     }
 
+    pub fn push_str_current(&self, string: &mut String) {
+        let _ = write!(string, "{:0>2.2}", self.current);
+    }
+
+    #[allow(unused)]
     /// Push to a string the change per second of the stock.
     pub fn push_str_change_per_second(&self, string: &mut String) {
         let change = self.get_change_per_tick() * (IncrementalPlugin::TICKS_PER_SECOND as f64);
@@ -243,11 +249,15 @@ impl StockPerSecond {
     pub const fn is_sign_positive(&self) -> bool {
         self.per_second.0.is_sign_positive()
     }
+}
 
-    pub fn negate(self) -> Self {
-        Self {
+impl Neg for StockPerSecond {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Self::Output {
             kind: self.kind,
-            per_second: -self.per_second
+            per_second: -self.per_second,
         }
     }
 }

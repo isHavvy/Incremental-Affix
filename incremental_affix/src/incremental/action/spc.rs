@@ -73,7 +73,7 @@ pub(super) fn preconsume(
         action_spc.base_changes
         .iter().copied()
         .filter(StockPerSecond::is_sign_negative)
-        .map(StockPerSecond::negate)
+        .map(std::ops::Neg::neg)
         .map(|sps| StockPerSecond::new(sps.kind, sps.per_second * action_spc.affinity_multiplier()))
     );
 }

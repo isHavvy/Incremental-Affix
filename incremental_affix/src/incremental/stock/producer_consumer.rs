@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy::platform::collections::HashMap;
 
 use crate::incremental::stock::{StockKind, Stockyard, StockPerSecond};
-use crate::incremental::DotPerSecond as _;
+use crate::incremental::{DotPerSecond as _, PerSecond};
 
 // #[TODO(Havvy)]: Make sure these systems happen in this order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
@@ -38,9 +38,15 @@ impl Default for StockyardProducerConsumer {
 }
 
 impl StockyardProducerConsumer {
-    /// The percentage of the consumption that was fulfilled during the consume 
+    /// The percentage of the consumption that was fulfilled during the consume step
     pub fn consumption_fullfilled(&self) -> f64 {
         self.consumption_fullfilled
+    }
+
+    pub fn per_second_for_stock(&self, stock_kind: StockKind) -> PerSecond {
+        self.produces.iter().filter(|sps| sps.kind == stock_kind).map(|sps| sps.per_second)
+        .chain(self.consumes.iter().filter(|sps| sps.kind == stock_kind).map(|sps| -sps.per_second))
+        .sum()
     }
 }
 

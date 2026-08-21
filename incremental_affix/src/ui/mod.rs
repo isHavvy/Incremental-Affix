@@ -7,6 +7,7 @@ pub mod item;
 use bevy::prelude::*;
 
 use crate::incremental::action::KnownActions;
+use crate::ui::stocks::stockyard_ui;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, SystemSet)]
 pub struct UiSetupSystemSet;
@@ -19,7 +20,7 @@ impl Plugin for UiPlugin {
 
         .add_systems(Startup, setup.in_set(UiSetupSystemSet))
         .add_systems(Update, (
-            stocks::update_resources_sidebar,
+            stocks::update_stockyard_sidebar,
         ))
 
         .add_plugins((
@@ -36,63 +37,39 @@ impl Plugin for UiPlugin {
 
 fn setup(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
     known_actions: Res<KnownActions>,
 ) {
-    let font = asset_server.load("fonts/FiraSans-Bold.ttf");
-
     commands.spawn(Camera2d);
 
-    let root_node = commands.spawn((
+    commands.queue_spawn_scene(bsn! {
+        #Root
         Node {
             flex_direction: FlexDirection::Row,
-
             width: percent(100),
             height: percent(100),
+        }
+        BackgroundColor(Color::srgb_u8(238, 223, 187))
+        Children [
+            #Sidebar
+            Node {
+                flex_direction: FlexDirection::Column,
+                height: percent(100),
+                border: { px(2).right() }
+            }
+            BorderColor::all(Color::BLACK)
+            Children [ stockyard_ui() ],
 
-            ..default()
-        },
-        BackgroundColor(Color::srgb_u8(238, 223, 187)),
-    )).id();
+            #ScreensAndScreensBarContainer // Yeah, this name sucks
+            Node {
+                flex_direction: FlexDirection::Column,
+                flex_grow: 1.,
 
-    let sidebar = commands.spawn((
-        Node {
-            flex_direction: FlexDirection::Column,
-            flex_grow: 0.,
-
-            width: px(250),
-            height: percent(100),
-
-            border: px(2).right(),
-
-            ..default()
-        },
-        BorderColor::all(Color::BLACK),
-
-        ChildOf(root_node)
-    ))
-    .id();
-
-    let right_of_sidebar = commands.spawn((
-        Node {
-            flex_direction: FlexDirection::Column,
-            flex_grow: 1.,
-
-            border: px(2).bottom(),
-
-            ..default()
-        },
-        ChildOf(root_node)
-    )).id();
-
-    stocks::spawn_stocks_ui(&mut commands, sidebar, font.clone());
-    let(screen1, screen2) = screen::screens_ui(known_actions);
-    let mut screen1 = commands.queue_spawn_scene(screen1);
-    screen1.insert(ChildOf(right_of_sidebar));
-    let mut screen2 = commands.queue_spawn_scene(screen2);
-    screen2.insert(ChildOf(right_of_sidebar));
-    commands.queue_spawn_scene(bsn!{
-        log::log_ui()
-        ChildOf(right_of_sidebar)
+                border: { px(2).bottom() }
+            }
+            Children [
+                { screen::screens_ui(known_actions) },
+                log::log_ui()
+            ]
+        ]
     });
 }
